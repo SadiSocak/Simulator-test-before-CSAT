@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>실모&모의고사 오답노트 매니저</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js for data visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Custom styling -->
+    <style>
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+            background-color: #f8fafc;
+        }
+        /* Custom scrollbar for clean UI */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="text-slate-800 min-h-screen flex flex-col">
+
+    <!-- Header Banner -->
+    <header class="bg-indigo-600 text-white shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-white text-indigo-600 p-2 rounded-xl shadow-sm">
+                    <i class="fa-solid font-bold text-xl fa-graduation-cap"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight sm:text-xl">실모 & 모의고사 노트</h1>
+                    <p class="text-xs text-indigo-200 hidden sm:block">성적 기록부터 틀린 이유 분석까지 한눈에!</p>
+                </div>
+            </div>
+            
+            <!-- Quick Stats Summary Header -->
+            <div class="flex items-center space-x-2 text-xs sm:text-sm">
+                <button onclick="openModal()" class="bg-indigo-500 hover:bg-indigo-700 text-white px-3 py-2 rounded-lg font-medium transition flex items-center shadow-sm">
+                    <i class="fa-solid fa-plus mr-1.5"></i> 모의고사 등록
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full">
+        <!-- Navigation Tabs -->
+        <div class="flex border-b border-slate-200 mb-6 bg-white p-1 rounded-xl shadow-sm">
+            <button id="tab-dashboard-btn" onclick="switchTab('dashboard')" class="flex-1 py-2.5 px-4 rounded-lg font-semibold text-sm transition text-center flex items-center justify-center space-x-2 bg-indigo-50 text-indigo-600 shadow-sm">
+                <i class="fa-solid fa-chart-pie"></i>
+                <span>대시보드 & 통계</span>
+            </button>
+            <button id="tab-records-btn" onclick="switchTab('records')" class="flex-1 py-2.5 px-4 rounded-lg font-semibold text-sm transition text-center flex items-center justify-center space-x-2 text-slate-500 hover:text-slate-800">
+                <i class="fa-solid fa-list-check"></i>
+                <span>성적 및 오답 목록</span>
+            </button>
+        </div>
+
+        <!-- ==================== DASHBOARD TAB ==================== -->
+        <section id="tab-dashboard" class="space-y-6">
+            <!-- Summary Metric Cards -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between">
+                    <span class="text-xs font-semibold text-slate-400">총 기록 시험</span>
+                    <div class="flex items-baseline justify-between mt-2">
+                        <span id="stat-total-count" class="text-2xl font-bold text-slate-800">0</span>
+                        <span class="text-xs font-medium text-slate-500">회</span>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between">
+                    <span class="text-xs font-semibold text-slate-400">평균 원점수</span>
+                    <div class="flex items-baseline justify-between mt-2">
+                        <span id="stat-avg-score" class="text-2xl font-bold text-indigo-600">0</span>
+                        <span class="text-xs font-medium text-slate-500">점</span>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between">
+                    <span class="text-xs font-semibold text-slate-400">누적 복습 문항</span>
+                    <div class="flex items-baseline justify-between mt-2">
+                        <span id="stat-total-wrong" class="text-2xl font-bold text-rose-500">0</span>
+                        <span class="text-xs font-medium text-slate-500">개</span>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between">
+                    <span class="text-xs font-semibold text-slate-400">최우수 원인(주요 실수)</span>
+                    <div class="flex items-baseline justify-between mt-2">
+                        <span id="stat-top-reason" class="text-base font-bold text-amber-600 truncate">없음</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Score Trend Line Chart -->
+                <div class="lg:col-span-2 bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+                        <div>
+                            <h2 class="font-bold text-slate-800 text-base">회차별/날짜별 점수 추이</h2>
+                            <p class="text-xs text-slate-400">과목별 성적 변화 흐름을 확인하세요</p>
+                        </div>
+                        <select id="chart-subject-filter" onchange="updateCharts()" class="bg-slate-50 border border-slate-200 text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="ALL">전체 과목 보기</option>
+                            <option value="국어">국어</option>
+                            <option value="수학">수학</option>
+                            <option value="영어">영어</option>
+                            <option value="한국사">한국사</option>
+                            <option value="탐구1">탐구1</option>
+                            <option value="탐구2">탐구2</option>
+                        </select>
+                    </div>
+                    <div class="relative h-64 sm:h-72 w-full">
+                        <canvas id="scoreTrendChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Wrong Reasons Doughnut Chart -->
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+                    <div class="mb-4">
+                        <h2 class="font-bold text-slate-800 text-base">오답 원인 분석 비율</h2>
+                        <p class="text-xs text-slate-400">어떤 이유로 주로 틀렸는지 분석합니다</p>
+                    </div>
+                    <div class="relative h-64 sm:h-72 w-full flex items-center justify-center">
+                        <canvas id="wrongReasonChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Incorrect Questions Highlight -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="font-bold text-slate-800 text-base">최근 기록된 오답 노트 (최신 5건)</h2>
+                    <button onclick="switchTab('records')" class="text-xs text-indigo-600 font-semibold hover:underline">전체 보기 →</button>
+                </div>
+                <div id="recent-notes-container" class="space-y-3">
+                    <!-- Dynamic rendering -->
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== RECORDS TAB ==================== -->
+        <section id="tab-records" class="space-y-6 hidden">
+            <!-- Filter & Search Control Panel -->
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-wrap gap-3 items-center justify-between">
+                <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                    <!-- Subject Filter -->
+                    <div class="flex items-center space-x-2">
+                        <label class="text-xs font-semibold text-slate-500 whitespace-nowrap">과목:</label>
+                        <select id="filter-subject" onchange="renderRecordsList()" class="bg-slate-50 border border-slate-200 text-xs rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="ALL">전체 과목</option>
+                            <option value="국어">국어</option>
+                            <option value="수학">수학</option>
+                            <option value="영어">영어</option>
+                            <option value="한국사">한국사</option>
+                            <option value="탐구1">탐구1</option>
+                            <option value="탐구2">탐구2</option>
+                        </select>
+                    </div>
+
+                    <!-- Search Box -->
+                    <div class="relative flex-1 sm:w-64">
+                        <input type="text" id="filter-search" oninput="renderRecordsList()" placeholder="시험명/회차/메모 검색..." class="w-full bg-slate-50 border border-slate-200 text-xs rounded-lg pl-8 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-2.5 text-slate-400 text-xs"></i>
+                    </div>
+                </div>
+
+                <div class="text-xs text-slate-400">
+                    총 <span id="record-count-text" class="font-bold text-slate-700">0</span>개의 시험 기록
+                </div>
+            </div>
+
+            <!-- List Container -->
+            <div id="records-list" class="space-y-4">
+                <!-- Records injected dynamically -->
+            </div>
+        </section>
+    </main>
+
+    <!-- ==================== MODAL: ADD / EDIT MOCK EXAM ==================== -->
+    <div id="exam-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden my-auto">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                <h3 id="modal-title" class="font-bold text-slate-800 text-base">모의고사 및 오답 등록</h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Modal Form Body -->
+            <form id="exam-form" onsubmit="handleFormSubmit(event)" class="p-6 overflow-y-auto space-y-6 flex-1">
+                <input type="hidden" id="exam-id">
+
+                <!-- 기본 정보 -->
+                <div>
+                    <h4 class="text-xs font-bold text-indigo-600 uppercase tracking-wider mb-3"><i class="fa-solid fa-circle-info mr-1"></i> 시험 기본 정보</h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 mb-1">과목 <span class="text-rose-500">*</span></label>
+                            <select id="form-subject" required class="w-full bg-slate-50 border border-slate-200 text-sm rounded-xl p-2.5 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                <option value="국어">국어</option>
+                                <option value="수학">수학</option>
+                                <option value="영어">영어</option>
+                                <option value="한국사">한국사</option>
+                                <option value="탐구1">탐구1</option>
+                                <option value="탐구2">탐구2</option>
+                            </select>
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label class="block text-xs font-medium text-slate-600 mb-1">시험 이름 / 회차 <span class="text-rose-500">*</span></label>
+                            <input type="text" id="form-title" required placeholder="예: 시대인재 3회, 9월 모의평가 등" class="w-full bg-slate-50 border border-slate-200 text-sm rounded-xl p-2.5 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 mb-1">응시 일자 <span class="text-rose-500">*</span></label>
+                            <input type="date" id="form-date" required class="w-full bg-slate-50 border border-slate-200 text-sm rounded-xl p-2.5 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 mb-1">원점수 (점)</label>
+                            <input type="number" id="form-score" min="0" max="100" placeholder="0 ~ 100" class="w-full bg-slate-50 border border-slate-200 text-sm rounded-xl p-2.5 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 mb-1">등급 / 성적표 등급</label>
+                            <select id="form-grade" class="w-full bg-slate-50 border border-slate-200 text-sm rounded-xl p-2.5 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                <option value="">미선택</option>
+                                <option value="1등급">1등급</option>
+                                <option value="2등급">2등급</option>
+                                <option value="3등급">3등급</option>
+                                <option value="4등급">4등급</option>
+                                <option value="5등급">5등급</option>
+                                <option value="6등급 이하">6등급 이하</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 오답 노트 추가 섹션 -->
+                <div class="border-t border-slate-100 pt-4">
+                    <div class="flex items-center justify-between mb-3">
+                        <h4 class="text-xs font-bold text-rose-500 uppercase tracking-wider"><i class="fa-solid fa-triangle-exclamation mr-1"></i> 틀린 문제 오답 기록</h4>
+                        <button type="button" onclick="addWrongQuestionInput()" class="text-xs bg-rose-50 hover:bg-rose-100 text-rose-600 font-medium px-2.5 py-1.5 rounded-lg border border-rose-200 transition">
+                            <i class="fa-solid fa-plus mr-1"></i> 문제 추가
+                        </button>
+                    </div>
+
+                    <!-- List of Wrong Questions -->
+                    <div id="wrong-questions-list" class="space-y-3">
+                        <!-- Dynamic items -->
+                    </div>
+                </div>
+
+                <!-- 모의고사 총평 메모 -->
+                <div class="border-t border-slate-100 pt-4">
+                    <label class="block text-xs font-medium text-slate-600 mb-1">시험 전체 총평 및 반성 메모</label>
+                    <textarea id="form-memo" rows="3" placeholder="시간 배분 문제, 전반적인 난이도 느낌, 다음 시험 목표 등을 기록하세요." class="w-full bg-slate-50 border border-slate-200 text-sm rounded-xl p-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none resize-none"></textarea>
+                </div>
+
+                <!-- Form Action Buttons -->
+                <div class="flex items-center justify-end space-x-3 pt-3 border-t border-slate-100">
+                    <button type="button" onclick="closeModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition">취소</button>
+                    <button type="submit" class="px-5 py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-md transition">저장하기</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-100 py-4 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400">
+            실모 및 모의고사 성적 관리 매니저 &bull; 브라우저 내 데이터가 안전하게 자동 저장됩니다.
+        </div>
+    </footer>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        // Data Store (LocalStorage Backup)
+        const STORAGE_KEY = 'mock_exam_records_v1';
+        let examRecords = [];
+
+        // Chart Instance References
+        let trendChartInstance = null;
+        let reasonChartInstance = null;
+
+        // Constants
+        const REASON_OPTIONS = [
+            '개념 부족',
+            '계산/실행 실수',
+            '시간 부족',
+            '문제/조건 오독',
+            '찍음/추측',
+            '기타'
+        ];
+
+        // Initialize App
+        window.addEventListener('DOMContentLoaded', () => {
+            loadRecords();
+            initCharts();
+            updateDashboard();
+            renderRecordsList();
+            
+            // Set default date for modal
+            document.getElementById('form-date').value = new Date().toISOString().split('T')[0];
+        });
+
+        // Local Storage Helper Functions
+        function loadRecords() {
+            try {
+                const stored = localStorage.getItem(STORAGE_KEY);
+                if (stored) {
+                    examRecords = JSON.parse(stored);
+                } else {
+                    // Seed initial sample data if empty
+                    examRecords = getSampleData();
+                    saveRecords();
+                }
+            } catch (e) {
+                console.error("Error loading records from LocalStorage", e);
+                examRecords = [];
+            }
+        }
+
+        function saveRecords() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(examRecords));
+            } catch (e) {
+                console.error("Error saving records to LocalStorage", e);
+            }
+        }
+
+        // Tab Switching Logic
+        function switchTab(tabName) {
+            const dashTab = document.getElementById('tab-dashboard');
+            const recTab = document.getElementById('tab-records');
+            const dashBtn = document.getElementById('tab-dashboard-btn');
+            const recBtn = document.getElementById('tab-records-btn');
+
+            if (tabName === 'dashboard') {
+                dashTab.classList.remove('hidden');
+                recTab.classList.add('hidden');
+                dashBtn.className = "flex-1 py-2.5 px-4 rounded-lg font-semibold text-sm transition text-center flex items-center justify-center space-x-2 bg-indigo-50 text-indigo-600 shadow-sm";
+                recBtn.className = "flex-1 py-2.5 px-4 rounded-lg font-semibold text-sm transition text-center flex items-center justify-center space-x-2 text-slate-500 hover:text-slate-800";
+                updateDashboard();
+            } else {
+                dashTab.classList.add('hidden');
+                recTab.classList.remove('hidden');
+                dashBtn.className = "flex-1 py-2.5 px-4 rounded-lg font-semibold text-sm transition text-center flex items-center justify-center space-x-2 text-slate-500 hover:text-slate-800";
+                recBtn.className = "flex-1 py-2.5 px-4 rounded-lg font-semibold text-sm transition text-center flex items-center justify-center space-x-2 bg-indigo-50 text-indigo-600 shadow-sm";
+                renderRecordsList();
+            }
+        }
+
+        // Modal Open/Close Logic
+        function openModal(editId = null) {
+            const modal = document.getElementById('exam-modal');
+            const form = document.getElementById('exam-form');
+            const listContainer = document.getElementById('wrong-questions-list');
+            listContainer.innerHTML = '';
+
+            if (editId) {
+                // Edit mode
+                document.getElementById('modal-title').innerText = "기록 수정하기";
+                const record = examRecords.find(r => r.id === editId);
+                if (record) {
+                    document.getElementById('exam-id').value = record.id;
+                    document.getElementById('form-subject').value = record.subject;
+                    document.getElementById('form-title').value = record.title;
+                    document.getElementById('form-date').value = record.date;
+                    document.getElementById('form-score').value = record.score !== null ? record.score : '';
+                    document.getElementById('form-grade').value = record.grade || '';
+                    document.getElementById('form-memo').value = record.memo || '';
+
+                    if (record.wrongQuestions && record.wrongQuestions.length > 0) {
+                        record.wrongQuestions.forEach(q => addWrongQuestionInput(q.num, q.reason, q.note));
+                    } else {
+                        addWrongQuestionInput();
+                    }
+                }
+            } else {
+                // New record mode
+                document.getElementById('modal-title').innerText = "모의고사 및 오답 등록";
+                form.reset();
+                document.getElementById('exam-id').value = '';
+                document.getElementById('form-date').value = new Date().toISOString().split('T')[0];
+                addWrongQuestionInput(); // Add 1 empty item by default
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('exam-modal').classList.add('hidden');
+        }
+
+        // Dynamic Input Rows for Wrong Questions
+        function addWrongQuestionInput(num = '', reason = '개념 부족', note = '') {
+            const container = document.getElementById('wrong-questions-list');
+            const itemIndex = container.children.length;
+
+            const div = document.createElement('div');
+            div.className = 'bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2 relative group';
+
+            let optionsHtml = REASON_OPTIONS.map(r => `<option value="${r}" ${r === reason ? 'selected' : ''}>${r}</option>`).join('');
+
+            div.innerHTML = `
+                <div class="grid grid-cols-12 gap-2 items-center">
+                    <div class="col-span-4 sm:col-span-3">
+                        <input type="text" placeholder="문항 번호 (예: 21번)" value="${num}" class="wrong-num w-full bg-white border border-slate-200 text-xs rounded-lg p-2 focus:ring-1 focus:ring-indigo-500 focus:outline-none">
+                    </div>
+                    <div class="col-span-7 sm:col-span-8">
+                        <select class="wrong-reason w-full bg-white border border-slate-200 text-xs rounded-lg p-2 focus:ring-1 focus:ring-indigo-500 focus:outline-none">
+                            ${optionsHtml}
+                        </select>
+                    </div>
+                    <div class="col-span-1 text-right">
+                        <button type="button" onclick="this.closest('.bg-slate-50').remove()" class="text-slate-400 hover:text-rose-500 p-1">
+                            <i class="fa-solid fa-trash-can text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+                <div>
+                    <input type="text" placeholder="오답 메모/핵심 정리 (예: 삼각함수 덧셈정리 공식 적용 착오)" value="${note}" class="wrong-note w-full bg-white border border-slate-200 text-xs rounded-lg p-2 focus:ring-1 focus:ring-indigo-500 focus:outline-none">
+                </div>
+            `;
+
+            container.appendChild(div);
+        }
+
+        // Form Submit Event Handler
+        function handleFormSubmit(e) {
+            e.preventDefault();
+
+            const editId = document.getElementById('exam-id').value;
+            const subject = document.getElementById('form-subject').value;
+            const title = document.getElementById('form-title').value.trim();
+            const date = document.getElementById('form-date').value;
+            const scoreVal = document.getElementById('form-score').value;
+            const score = scoreVal !== '' ? parseInt(scoreVal, 10) : null;
+            const grade = document.getElementById('form-grade').value;
+            const memo = document.getElementById('form-memo').value.trim();
+
+            // Collect wrong questions
+            const wrongQuestions = [];
+            const wrongItems = document.querySelectorAll('#wrong-questions-list > div');
+            wrongItems.forEach(item => {
+                const num = item.querySelector('.wrong-num').value.trim();
+                const reason = item.querySelector('.wrong-reason').value;
+                const note = item.querySelector('.wrong-note').value.trim();
+
+                if (num || note) {
+                    wrongQuestions.push({ num, reason, note });
+                }
+            });
+
+            if (editId) {
+                // Update
+                const index = examRecords.findIndex(r => r.id === editId);
+                if (index !== -1) {
+                    examRecords[index] = {
+                        ...examRecords[index],
+                        subject, title, date, score, grade, memo, wrongQuestions
+                    };
+                }
+            } else {
+                // Insert
+                const newRecord = {
+                    id: Date.now().toString(),
+                    subject,
+                    title,
+                    date,
+                    score,
+                    grade,
+                    memo,
+                    wrongQuestions,
+                    createdAt: new Date().toISOString()
+                };
+                examRecords.push(newRecord);
+            }
+
+            saveRecords();
+            closeModal();
+
+            // Refresh UI
+            updateDashboard();
+            renderRecordsList();
+        }
+
+        // Delete Record Logic
+        function deleteRecord(id) {
+            if (confirm('정말로 이 모의고사 기록을 삭제하시겠습니까?')) {
+                examRecords = examRecords.filter(r => r.id !== id);
+                saveRecords();
+                updateDashboard();
+                renderRecordsList();
+            }
+        }
+
+        // ==================== DASHBOARD & STATS LOGIC ====================
+        function updateDashboard() {
+            // Stat Cards Calc
+            document.getElementById('stat-total-count').innerText = examRecords.length;
+
+            const scores = examRecords.filter(r => r.score !== null).map(r => r.score);
+            const avgScore = scores.length > 0 ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1) : '0';
+            document.getElementById('stat-avg-score').innerText = avgScore;
+
+            let totalWrong = 0;
+            const reasonCounts = {};
+            REASON_OPTIONS.forEach(r => reasonCounts[r] = 0);
+
+            examRecords.forEach(r => {
+                if (r.wrongQuestions) {
+                    totalWrong += r.wrongQuestions.length;
+                    r.wrongQuestions.forEach(q => {
+                        if (reasonCounts[q.reason] !== undefined) {
+                            reasonCounts[q.reason]++;
+                        } else {
+                            reasonCounts[q.reason] = 1;
+                        }
+                    });
+                }
+            });
+
+            document.getElementById('stat-total-wrong').innerText = totalWrong;
+
+            // Find top reason
+            let topReason = '없음';
+            let maxCount = 0;
+            Object.keys(reasonCounts).forEach(reason => {
+                if (reasonCounts[reason] > maxCount) {
+                    maxCount = reasonCounts[reason];
+                    topReason = reason;
+                }
+            });
+            document.getElementById('stat-top-reason').innerText = maxCount > 0 ? `${topReason} (${maxCount}건)` : '없음';
+
+            // Render Recent Notes
+            renderRecentNotes();
+
+            // Update Charts
+            updateCharts();
+        }
+
+        function renderRecentNotes() {
+            const container = document.getElementById('recent-notes-container');
+            container.innerHTML = '';
+
+            // Get all wrong questions flattened with exam info
+            const allNotes = [];
+            examRecords.forEach(r => {
+                if (r.wrongQuestions && r.wrongQuestions.length > 0) {
+                    r.wrongQuestions.forEach(q => {
+                        allNotes.push({
+                            examTitle: r.title,
+                            subject: r.subject,
+                            date: r.date,
+                            ...q
+                        });
+                    });
+                }
+            });
+
+            // Sort by date desc
+            allNotes.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            const recentNotes = allNotes.slice(0, 5);
+
+            if (recentNotes.length === 0) {
+                container.innerHTML = `<div class="text-center py-6 text-slate-400 text-xs">등록된 오답 기록이 없습니다.</div>`;
+                return;
+            }
+
+            recentNotes.forEach(note => {
+                const div = document.createElement('div');
+                div.className = 'p-3 bg-slate-50 border border-slate-100 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2';
+
+                const subjectColor = getSubjectBadgeColor(note.subject);
+
+                div.innerHTML = `
+                    <div class="flex items-start space-x-3">
+                        <span class="text-xs px-2 py-1 rounded-md font-semibold ${subjectColor}">${note.subject}</span>
+                        <div>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs font-bold text-slate-800">${note.examTitle}</span>
+                                <span class="text-xs font-semibold text-rose-500">${note.num || '문항'}</span>
+                                <span class="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded">${note.reason}</span>
+                            </div>
+                            <p class="text-xs text-slate-600 mt-1">${note.note || '메모 없음'}</p>
+                        </div>
+                    </div>
+                    <div class="text-[11px] text-slate-400 whitespace-nowrap self-end sm:self-center">${note.date}</div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // Initialize Chart.js
+        function initCharts() {
+            const trendCtx = document.getElementById('scoreTrendChart').getContext('2d');
+            const reasonCtx = document.getElementById('wrongReasonChart').getContext('2d');
+
+            trendChartInstance = new Chart(trendCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: []
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: true, position: 'top', labels: { boxWidth: 12, font: { size: 11 } } }
+                    },
+                    scales: {
+                        y: { min: 0, max: 100, ticks: { stepSize: 20 } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+
+            reasonChartInstance = new Chart(reasonCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: REASON_OPTIONS,
+                    datasets: [{
+                        data: [0, 0, 0, 0, 0, 0],
+                        backgroundColor: [
+                            '#f87171', // 개념 부족 (Rose)
+                            '#fb923c', // 계산/실행 실수 (Orange)
+                            '#facc15', // 시간 부족 (Yellow)
+                            '#818cf8', // 문제/조건 오독 (Indigo)
+                            '#c084fc', // 찍음/추측 (Purple)
+                            '#94a3b8'  // 기타 (Slate)
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } }
+                    }
+                }
+            });
+        }
+
+        function updateCharts() {
+            if (!trendChartInstance || !reasonChartInstance) return;
+
+            const selectedSubject = document.getElementById('chart-subject-filter').value;
+
+            // 1. Line Chart Data Prep
+            let filteredRecords = [...examRecords];
+            if (selectedSubject !== 'ALL') {
+                filteredRecords = filteredRecords.filter(r => r.subject === selectedSubject);
+            }
+            // Sort chronologically
+            filteredRecords.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            const labels = filteredRecords.map(r => `${r.date} (${r.subject.slice(0, 1)})`);
+            const dataScores = filteredRecords.map(r => r.score);
+
+            trendChartInstance.data.labels = labels;
+            trendChartInstance.data.datasets = [{
+                label: selectedSubject === 'ALL' ? '원점수 (전체)' : `${selectedSubject} 원점수`,
+                data: dataScores,
+                borderColor: '#4f46e5',
+                backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                fill: true,
+                tension: 0.3,
+                pointRadius: 4,
+                pointBackgroundColor: '#4f46e5'
+            }];
+            trendChartInstance.update();
+
+            // 2. Doughnut Chart Data Prep
+            const reasonCounts = {};
+            REASON_OPTIONS.forEach(r => reasonCounts[r] = 0);
+
+            examRecords.forEach(r => {
+                if (selectedSubject === 'ALL' || r.subject === selectedSubject) {
+                    if (r.wrongQuestions) {
+                        r.wrongQuestions.forEach(q => {
+                            if (reasonCounts[q.reason] !== undefined) {
+                                reasonCounts[q.reason]++;
+                            } else {
+                                reasonCounts['기타']++;
+                            }
+                        });
+                    }
+                }
+            });
+
+            reasonChartInstance.data.datasets[0].data = REASON_OPTIONS.map(r => reasonCounts[r]);
+            reasonChartInstance.update();
+        }
+
+        // ==================== RECORDS LIST VIEW LOGIC ====================
+        function renderRecordsList() {
+            const container = document.getElementById('records-list');
+            const subjectFilter = document.getElementById('filter-subject').value;
+            const searchQuery = document.getElementById('filter-search').value.toLowerCase().trim();
+
+            let list = [...examRecords];
+
+            // Apply Filters
+            if (subjectFilter !== 'ALL') {
+                list = list.filter(r => r.subject === subjectFilter);
+            }
+
+            if (searchQuery) {
+                list = list.filter(r => {
+                    const matchTitle = r.title.toLowerCase().includes(searchQuery);
+                    const matchMemo = r.memo && r.memo.toLowerCase().includes(searchQuery);
+                    const matchWrong = r.wrongQuestions && r.wrongQuestions.some(q => 
+                        (q.num && q.num.toLowerCase().includes(searchQuery)) ||
+                        (q.note && q.note.toLowerCase().includes(searchQuery)) ||
+                        (q.reason && q.reason.toLowerCase().includes(searchQuery))
+                    );
+                    return matchTitle || matchMemo || matchWrong;
+                });
+            }
+
+            // Sort newest first
+            list.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            document.getElementById('record-count-text').innerText = list.length;
+
+            if (list.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-white rounded-2xl p-12 text-center text-slate-400 border border-slate-100 shadow-sm">
+                        <i class="fa-regular fa-folder-open text-4xl mb-3 text-slate-300"></i>
+                        <p class="text-sm">조회할 모의고사 성적 및 오답 기록이 없습니다.</p>
+                        <button onclick="openModal()" class="mt-3 text-xs bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-lg font-medium hover:bg-indigo-100 transition">
+                            + 새로 등록하기
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = list.map(record => {
+                const badgeColor = getSubjectBadgeColor(record.subject);
+                
+                let wrongHtml = '';
+                if (record.wrongQuestions && record.wrongQuestions.length > 0) {
+                    wrongHtml = `
+                        <div class="mt-4 pt-3 border-t border-slate-100">
+                            <span class="text-xs font-semibold text-slate-500 mb-2 block">오답 문제 노트 (${record.wrongQuestions.length}개)</span>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                ${record.wrongQuestions.map(q => `
+                                    <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-xs">
+                                        <div class="flex items-center justify-between mb-1">
+                                            <span class="font-bold text-rose-600">${q.num || '문항'}</span>
+                                            <span class="bg-rose-100/80 text-rose-700 text-[10px] px-2 py-0.5 rounded-md font-medium">${q.reason}</span>
+                                        </div>
+                                        <p class="text-slate-600">${q.note || '메모 없음'}</p>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition">
+                        <div class="flex flex-wrap items-start justify-between gap-3">
+                            <div class="space-y-1">
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-xs px-2.5 py-1 rounded-lg font-semibold ${badgeColor}">${record.subject}</span>
+                                    <h3 class="font-bold text-slate-800 text-base">${record.title}</h3>
+                                </div>
+                                <div class="text-xs text-slate-400 flex items-center space-x-2">
+                                    <span><i class="fa-regular fa-calendar mr-1"></i>${record.date}</span>
+                                </div>
+                            </div>
+
+                            <!-- Scores & Grade Badges -->
+                            <div class="flex items-center space-x-3">
+                                ${record.score !== null ? `
+                                    <div class="text-right">
+                                        <span class="text-[10px] text-slate-400 block">원점수</span>
+                                        <span class="text-lg font-bold text-indigo-600">${record.score}<span class="text-xs">점</span></span>
+                                    </div>
+                                ` : ''}
+                                ${record.grade ? `
+                                    <div class="text-right bg-indigo-50 border border-indigo-100 px-3 py-1 rounded-xl">
+                                        <span class="text-[10px] text-indigo-400 block">등급</span>
+                                        <span class="text-sm font-bold text-indigo-700">${record.grade}</span>
+                                    </div>
+                                ` : ''}
+                                
+                                <div class="flex items-center space-x-1 pl-2 border-l border-slate-100">
+                                    <button onclick="openModal('${record.id}')" class="p-2 text-slate-400 hover:text-indigo-600 rounded-lg hover:bg-slate-50 transition" title="수정">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                    </button>
+                                    <button onclick="deleteRecord('${record.id}')" class="p-2 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-slate-50 transition" title="삭제">
+                                        <i class="fa-solid fa-trash-can"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        ${record.memo ? `
+                            <div class="mt-3 text-xs bg-slate-50 p-3 rounded-xl text-slate-700">
+                                <i class="fa-regular fa-comment-dots mr-1 text-slate-400"></i>${record.memo}
+                            </div>
+                        ` : ''}
+
+                        ${wrongHtml}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Helper Badge Colors
+        function getSubjectBadgeColor(subject) {
+            switch(subject) {
+                case '국어': return 'bg-amber-100 text-amber-800';
+                case '수학': return 'bg-blue-100 text-blue-800';
+                case '영어': return 'bg-emerald-100 text-emerald-800';
+                case '한국사': return 'bg-purple-100 text-purple-800';
+                case '탐구1': return 'bg-rose-100 text-rose-800';
+                case '탐구2': return 'bg-cyan-100 text-cyan-800';
+                default: return 'bg-slate-100 text-slate-800';
+            }
+        }
+
+        // Mock Sample Data Generator
+        function getSampleData() {
+            return [
+                {
+                    id: '1695800000001',
+                    subject: '수학',
+                    title: ' 시대인재 실전모의고사 1회',
+                    date: '2026-09-10',
+                    score: 84,
+                    grade: '2등급',
+                    memo: '공통과목 22번 계산 과정에서 부호 착오. 미적분은 대체로 양호함.',
+                    wrongQuestions: [
+                        { num: '14번', reason: '문제/조건 오독', note: 'ㄱ, ㄴ, ㄷ 보기 조건 중 단서 하나 놓침' },
+                        { num: '22번', reason: '계산/실행 실수', note: '삼차함수 최고차항 계수 적용 시 부호 오답' },
+                        { num: '30번', reason: '개념 부족', note: '음함수 미분법 조건 재검토 필요' }
+                    ]
+                },
+                {
+                    id: '1695800000002',
+                    subject: '국어',
+                    title: '9월 평가원 모의고사',
+                    date: '2026-09-04',
+                    score: 91,
+                    grade: '1등급',
+                    memo: '독서 과학지문 독해 시 시간 많이 소요됨. 언어와 매체 완벽 정리 필요.',
+                    wrongQuestions: [
+                        { num: '17번', reason: '시간 부족', note: '독서 과학 지문 시간이 모자라 급하게 풀었음' },
+                        { num: '37번', reason: '개념 부족', note: '언어 문법 중 합성어 형태소 분석 오류' }
+                    ]
+                },
+                {
+                    id: '1695800000003',
+                    subject: '영어',
+                    title: '강대 K 모의고사 2회',
+                    date: '2026-09-18',
+                    score: 88,
+                    grade: '2등급',
+                    memo: '빈칸추론 파트 지문 난이도 높았음. 단어 암기 매일 계속 진행하기.',
+                    wrongQuestions: [
+                        { num: '31번', reason: '개념 부족', note: '주요 어휘 의미 다의어 파악 미흡' },
+                        { num: '34번', reason: '시간 부족', note: '지문 길이가 길어 3분 이상 소요 및 오답' }
+                    ]
+                }
+            ];
+        }
+    </script>
+</body>
+</html>
