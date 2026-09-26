@@ -28,19 +28,19 @@
 
     <main class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8 space-y-8">
 
-        <!-- 분석 대시보드 섹션 (과목 탭을 위로 배치) -->
+        <!-- 분석 대시보드 섹션 -->
         <section class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-6">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
                 <div>
                     <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
                         <i class="fa-solid fa-chart-pie text-indigo-600"></i> 과목별 성적 & 취약점 분석 대시보드
                     </h2>
-                    <p class="text-sm text-slate-500">원하는 과목 탭을 클릭하면 상단 통계와 차트가 해당 과목 기준으로 맞춰집니다.</p>
+                    <p class="text-sm text-slate-500">과목 탭을 클릭하면 상단 카드와 모든 차트가 선택한 과목 기준으로 바뀝니다.</p>
                 </div>
                 
                 <!-- 과목 선택 탭 -->
                 <div class="flex flex-wrap gap-1 bg-slate-100 p-1 rounded-lg text-sm font-medium">
-                    <button onclick="switchTab('ALL')" id="tab-ALL" class="tab-btn px-3 py-1.5 rounded-md bg-white text-indigo-600 shadow-sm">전체</button>
+                    <button onclick="switchTab('ALL')" id="tab-ALL" class="tab-btn px-3 py-1.5 rounded-md bg-white text-indigo-600 shadow-sm font-bold">전체</button>
                     <button onclick="switchTab('국어')" id="tab-국어" class="tab-btn px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900">국어</button>
                     <button onclick="switchTab('수학')" id="tab-수학" class="tab-btn px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900">수학</button>
                     <button onclick="switchTab('영어')" id="tab-영어" class="tab-btn px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900">영어</button>
@@ -55,7 +55,7 @@
                         <i class="fa-solid fa-book-bookmark text-xl"></i>
                     </div>
                     <div>
-                        <p id="label-stat-exams" class="text-xs font-semibold text-slate-500 uppercase">총 응시 시험</p>
+                        <p id="label-stat-exams" class="text-xs font-semibold text-slate-500 uppercase">[전체] 응시 시험</p>
                         <p id="stat-total-exams" class="text-2xl font-bold text-slate-800">0회</p>
                     </div>
                 </div>
@@ -64,7 +64,7 @@
                         <i class="fa-solid fa-circle-exclamation text-xl"></i>
                     </div>
                     <div>
-                        <p id="label-stat-errors" class="text-xs font-semibold text-slate-500 uppercase">기록된 총 오답</p>
+                        <p id="label-stat-errors" class="text-xs font-semibold text-slate-500 uppercase">[전체] 기록된 오답</p>
                         <p id="stat-total-errors" class="text-2xl font-bold text-slate-800">0개</p>
                     </div>
                 </div>
@@ -73,7 +73,7 @@
                         <i class="fa-solid fa-chart-line text-xl"></i>
                     </div>
                     <div>
-                        <p id="label-stat-grade" class="text-xs font-semibold text-slate-500 uppercase">최근 등급</p>
+                        <p id="label-stat-grade" class="text-xs font-semibold text-slate-500 uppercase">[전체] 최근 등급</p>
                         <p id="stat-recent-grade" class="text-2xl font-bold text-slate-800">- 등급</p>
                     </div>
                 </div>
@@ -82,13 +82,13 @@
                         <i class="fa-solid fa-triangle-exclamation text-xl"></i>
                     </div>
                     <div>
-                        <p id="label-stat-reason" class="text-xs font-semibold text-slate-500 uppercase">최대 오답 원인</p>
+                        <p id="label-stat-reason" class="text-xs font-semibold text-slate-500 uppercase">[전체] 최대 오답 원인</p>
                         <p id="stat-main-reason" class="text-base font-bold text-slate-800 truncate max-w-[140px]">-</p>
                     </div>
                 </div>
             </div>
 
-            <!-- 차트 영역 -->
+            <!-- 기본 차트 영역 -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-2">
                 <!-- 원점수 추이 차트 -->
                 <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
@@ -111,10 +111,20 @@
                 </div>
             </div>
 
-            <!-- 수학 전용: 단원별 취약점 차트 (수학 탭 활성화 시에만 보임) -->
+            <!-- 국어 전용: 세부 영역 차트 -->
+            <div id="korean-analysis-box" class="hidden bg-emerald-50/50 p-5 rounded-xl border border-emerald-100 space-y-3">
+                <h3 class="text-sm font-bold text-emerald-900 flex items-center gap-2">
+                    <i class="fa-solid fa-book-open text-emerald-600"></i> [국어 전용] 독서·문학·선택 영역별 오답 분포
+                </h3>
+                <div class="h-60 relative">
+                    <canvas id="koreanUnitChart"></canvas>
+                </div>
+            </div>
+
+            <!-- 수학 전용: 세부 단원 차트 -->
             <div id="math-analysis-box" class="hidden bg-indigo-50/50 p-5 rounded-xl border border-indigo-100 space-y-3">
                 <h3 class="text-sm font-bold text-indigo-900 flex items-center gap-2">
-                    <i class="fa-solid fa-square-root-variable text-indigo-600"></i> [수학 전용] 수1·수2·선택 단원별 틀린 문항 수
+                    <i class="fa-solid fa-square-root-variable text-indigo-600"></i> [수학 전용] 수1·수2·선택 단원별 오답 분포
                 </h3>
                 <div class="h-60 relative">
                     <canvas id="mathUnitChart"></canvas>
@@ -139,7 +149,7 @@
                         <option value="탐구1">탐구1</option>
                         <option value="탐구2">탐구2</option>
                     </select>
-                    <input type="text" id="search-keyword" oninput="renderExamList()" placeholder="시험명/메모 검색..." class="bg-white border border-slate-300 text-slate-700 text-sm rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 w-44 sm:w-60">
+                    <input type="text" id="search-keyword" oninput="renderExamList()" placeholder="시험명/메모/단원 검색..." class="bg-white border border-slate-300 text-slate-700 text-sm rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 w-44 sm:w-60">
                 </div>
             </div>
 
@@ -166,7 +176,7 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">과목 <span class="text-rose-500">*</span></label>
-                        <select id="form-subject" onchange="toggleMathFields()" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <select id="form-subject" onchange="toggleSubjectFields()" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
                             <option value="국어">국어</option>
                             <option value="수학">수학</option>
                             <option value="영어">영어</option>
@@ -177,7 +187,7 @@
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">시험명 / 회차 <span class="text-rose-500">*</span></label>
-                        <input type="text" id="form-title" required placeholder="예: 3월 학평, 시대인재 1회차" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <input type="text" id="form-title" required placeholder="예: 3월 학평, 이감 1회차" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">응시 일자</label>
@@ -232,6 +242,7 @@
         // 차트 객체 변수
         let scoreChartInstance = null;
         let reasonChartInstance = null;
+        let koreanUnitChartInstance = null;
         let mathUnitChartInstance = null;
 
         // 초기화 함수
@@ -248,7 +259,7 @@
             document.getElementById('error-items-container').innerHTML = '';
             document.getElementById('form-date').value = new Date().toISOString().substring(0, 10);
             addErrorItemField();
-            toggleMathFields();
+            toggleSubjectFields();
             document.getElementById('exam-modal').classList.remove('hidden');
         }
 
@@ -256,18 +267,58 @@
             document.getElementById('exam-modal').classList.add('hidden');
         }
 
-        // 수학 입력폼 분기 처리
-        function toggleMathFields() {
-            const isMath = document.getElementById('form-subject').value === '수학';
-            document.querySelectorAll('.math-unit-select').forEach(el => {
-                el.style.display = isMath ? 'block' : 'none';
+        // 과목별 입력 세부 옵션 전환
+        function toggleSubjectFields() {
+            const subject = document.getElementById('form-subject').value;
+            const container = document.getElementById('error-items-container');
+            // 기존 등록된 필드들의 드롭다운을 과목에 맞게 재구성
+            const rows = container.querySelectorAll('.error-item-row');
+            rows.forEach(row => {
+                const unitSelect = row.querySelector('.err-unit');
+                if(unitSelect) {
+                    unitSelect.innerHTML = getUnitOptionsHtml(subject);
+                }
             });
+        }
+
+        // 과목에 맞는 세부 단원 드롭다운 HTML 생성
+        function getUnitOptionsHtml(subject, selectedValue = '') {
+            if (subject === '국어') {
+                return `
+                    <option value="기타" ${selectedValue === '기타' ? 'selected' : ''}>영역 선택</option>
+                    <option value="국어-독서" ${selectedValue === '국어-독서' ? 'selected' : ''}>독서 (비문학)</option>
+                    <option value="국어-문학" ${selectedValue === '국어-문학' ? 'selected' : ''}>문학</option>
+                    <option value="국어-화작" ${selectedValue === '국어-화작' ? 'selected' : ''}>선택: 화법과 작문</option>
+                    <option value="국어-언매" ${selectedValue === '국어-언매' ? 'selected' : ''}>선택: 언어와 매체</option>
+                `;
+            } else if (subject === '수학') {
+                return `
+                    <option value="기타" ${selectedValue === '기타' ? 'selected' : ''}>단원 선택</option>
+                    <optgroup label="수학 I">
+                        <option value="수1-지수로그" ${selectedValue === '수1-지수로그' ? 'selected' : ''}>수1: 지수·로그</option>
+                        <option value="수1-삼각함수" ${selectedValue === '수1-삼각함수' ? 'selected' : ''}>수1: 삼각함수</option>
+                        <option value="수1-수열" ${selectedValue === '수1-수열' ? 'selected' : ''}>수1: 수열</option>
+                    </optgroup>
+                    <optgroup label="수학 II">
+                        <option value="수2-함수의극한" ${selectedValue === '수2-함수의극한' ? 'selected' : ''}>수2: 함수의 극한/연속</option>
+                        <option value="수2-미분" ${selectedValue === '수2-미분' ? 'selected' : ''}>수2: 미분</option>
+                        <option value="수2-적분" ${selectedValue === '수2-적분' ? 'selected' : ''}>수2: 적분</option>
+                    </optgroup>
+                    <optgroup label="선택과목">
+                        <option value="선택-확통" ${selectedValue === '선택-확통' ? 'selected' : ''}>선택: 확률과 통계</option>
+                        <option value="선택-미적분" ${selectedValue === '선택-미적분' ? 'selected' : ''}>선택: 미적분</option>
+                        <option value="선택-기하" ${selectedValue === '선택-기하' ? 'selected' : ''}>선택: 기하</option>
+                    </optgroup>
+                `;
+            } else {
+                return `<option value="기타">세부 영역 해당없음</option>`;
+            }
         }
 
         // 오답 문항 필드 동적 추가
         function addErrorItemField(data = {}) {
             const container = document.getElementById('error-items-container');
-            const isMath = document.getElementById('form-subject').value === '수학';
+            const subject = document.getElementById('form-subject').value;
 
             const itemDiv = document.createElement('div');
             itemDiv.className = "error-item-row bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-2 relative";
@@ -277,38 +328,23 @@
                     <div>
                         <input type="text" class="err-num border border-slate-300 rounded px-2 py-1 text-sm w-full" placeholder="문항 번호 (예: 15번, 22번)" value="${data.num || ''}" required>
                     </div>
-                    <div class="math-unit-select" style="display: ${isMath ? 'block' : 'none'};">
+                    <div>
                         <select class="err-unit border border-slate-300 rounded px-2 py-1 text-sm w-full">
-                            <option value="기타">단원 선택</option>
-                            <optgroup label="수학 I">
-                                <option value="수1-지수로그" ${data.unit === '수1-지수로그' ? 'selected' : ''}>수1: 지수·로그</option>
-                                <option value="수1-삼각함수" ${data.unit === '수1-삼각함수' ? 'selected' : ''}>수1: 삼각함수</option>
-                                <option value="수1-수열" ${data.unit === '수1-수열' ? 'selected' : ''}>수1: 수열</option>
-                            </optgroup>
-                            <optgroup label="수학 II">
-                                <option value="수2-함수의극한" ${data.unit === '수2-함수의극한' ? 'selected' : ''}>수2: 함수의 극한/연속</option>
-                                <option value="수2-미분" ${data.unit === '수2-미분' ? 'selected' : ''}>수2: 미분</option>
-                                <option value="수2-적분" ${data.unit === '수2-적분' ? 'selected' : ''}>수2: 적분</option>
-                            </optgroup>
-                            <optgroup label="선택과목">
-                                <option value="선택-확통" ${data.unit === '선택-확통' ? 'selected' : ''}>선택: 확률과 통계</option>
-                                <option value="선택-미적분" ${data.unit === '선택-미적분' ? 'selected' : ''}>선택: 미적분</option>
-                                <option value="선택-기하" ${data.unit === '선택-기하' ? 'selected' : ''}>선택: 기하</option>
-                            </optgroup>
+                            ${getUnitOptionsHtml(subject, data.unit)}
                         </select>
                     </div>
                     <div>
                         <select class="err-reason border border-slate-300 rounded px-2 py-1 text-sm w-full" required>
-                            <option value="개념 부족" ${data.reason === '개념 부족' ? 'selected' : ''}>개념 부족</option>
-                            <option value="계산 실수" ${data.reason === '계산 실수' ? 'selected' : ''}>계산 실수</option>
+                            <option value="개념 부족" ${data.reason === '개념 부족' ? 'selected' : ''}>개념/지문 이해 부족</option>
+                            <option value="계산 실수" ${data.reason === '계산 실수' ? 'selected' : ''}>계산/단순 실수</option>
                             <option value="시간 부족" ${data.reason === '시간 부족' ? 'selected' : ''}>시간 부족</option>
-                            <option value="문제 오독" ${data.reason === '문제 오독' ? 'selected' : ''}>문제 오독/아이디어 미착상</option>
+                            <option value="문제 오독" ${data.reason === '문제 오독' ? 'selected' : ''}>문제 오독/조건 판단 미흡</option>
                             <option value="찍음/기타" ${data.reason === '찍음/기타' ? 'selected' : ''}>찍음/기타</option>
                         </select>
                     </div>
                 </div>
                 <div>
-                    <input type="text" class="err-note border border-slate-300 rounded px-2 py-1 text-sm w-full" placeholder="틀린 원인 분석 및 핵심 개념 메모" value="${data.note || ''}">
+                    <input type="text" class="err-note border border-slate-300 rounded px-2 py-1 text-sm w-full" placeholder="틀린 원인 분석 및 핵심 메모" value="${data.note || ''}">
                 </div>
             `;
             container.appendChild(itemDiv);
@@ -369,23 +405,22 @@
             }
         }
 
-        // 과목 필터에 맞춘 스탯 데이터 추출 헬퍼 함수
+        // 탭 필터링 헬퍼
         function getFilteredExams() {
             if(currentTab === 'ALL') return examData;
             if(currentTab === '탐구') return examData.filter(e => e.subject === '탐구1' || e.subject === '탐구2');
             return examData.filter(e => e.subject === currentTab);
         }
 
-        // 상단 스탯 업데이트 (과목 탭 맞춤 반영)
+        // 상단 스탯 업데이트
         function updateDashboardStats() {
             const filteredExams = getFilteredExams();
+            const labelText = currentTab === 'ALL' ? '[전체]' : `[${currentTab}]`;
 
-            // 라벨명 업데이트
-            const labelPrefix = currentTab === 'ALL' ? '' : `[${currentTab}] `;
-            document.getElementById('label-stat-exams').innerText = `${labelPrefix}응시 시험`;
-            document.getElementById('label-stat-errors').innerText = `${labelPrefix}기록된 오답`;
-            document.getElementById('label-stat-grade').innerText = `${labelPrefix}최근 등급`;
-            document.getElementById('label-stat-reason').innerText = `${labelPrefix}최대 오답 원인`;
+            document.getElementById('label-stat-exams').innerText = `${labelText} 응시 시험`;
+            document.getElementById('label-stat-errors').innerText = `${labelText} 기록된 오답`;
+            document.getElementById('label-stat-grade').innerText = `${labelText} 최근 등급`;
+            document.getElementById('label-stat-reason').innerText = `${labelText} 최대 오답 원인`;
 
             // 1. 총 응시 시험
             document.getElementById('stat-total-exams').innerText = `${filteredExams.length}회`;
@@ -426,6 +461,8 @@
         // 대시보드 탭 스위치
         function switchTab(tab) {
             currentTab = tab;
+            
+            // 버튼 스타일 업데이트
             document.querySelectorAll('.tab-btn').forEach(btn => {
                 btn.className = "tab-btn px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900";
             });
@@ -434,14 +471,22 @@
                 activeBtn.className = "tab-btn px-3 py-1.5 rounded-md bg-white text-indigo-600 shadow-sm font-bold";
             }
 
+            // 과목별 전용 박스 표시/숨김
+            const koreanBox = document.getElementById('korean-analysis-box');
             const mathBox = document.getElementById('math-analysis-box');
-            if(tab === '수학') {
+            
+            if(tab === '국어') {
+                koreanBox.classList.remove('hidden');
+                mathBox.classList.add('hidden');
+            } else if(tab === '수학') {
                 mathBox.classList.remove('hidden');
+                koreanBox.classList.add('hidden');
             } else {
+                koreanBox.classList.add('hidden');
                 mathBox.classList.add('hidden');
             }
 
-            // 탭 변경 시 상단 스탯과 차트 동시에 업데이트
+            // 데이터 갱신
             updateDashboardStats();
             renderCharts();
         }
@@ -514,7 +559,42 @@
                 }
             });
 
-            // 3. 수학 단원 차트 (수학 탭 활성화 시)
+            // 3. 국어 세부 차트 (국어 탭 활성화 시)
+            if(currentTab === '국어') {
+                const koreanCtx = document.getElementById('koreanUnitChart').getContext('2d');
+                if(koreanUnitChartInstance) koreanUnitChartInstance.destroy();
+
+                let korCounts = { "독서 (비문학)": 0, "문학": 0, "선택 (화작/언매)": 0 };
+
+                filteredExams.forEach(e => {
+                    e.errorItems.forEach(item => {
+                        if(item.unit.includes('독서')) korCounts["독서 (비문학)"]++;
+                        else if(item.unit.includes('문학')) korCounts["문학"]++;
+                        else if(item.unit.includes('화작') || item.unit.includes('언매')) korCounts["선택 (화작/언매)"]++;
+                    });
+                });
+
+                koreanUnitChartInstance = new Chart(koreanCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: Object.keys(korCounts),
+                        datasets: [{
+                            label: '틀린 문항 수',
+                            data: Object.values(korCounts),
+                            backgroundColor: '#10b981'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                        }
+                    }
+                });
+            }
+
+            // 4. 수학 세부 차트 (수학 탭 활성화 시)
             if(currentTab === '수학') {
                 const mathCtx = document.getElementById('mathUnitChart').getContext('2d');
                 if(mathUnitChartInstance) mathUnitChartInstance.destroy();
@@ -542,7 +622,7 @@
                     data: {
                         labels: Object.keys(unitCounts),
                         datasets: [{
-                            label: '틀린 오답 문항 수',
+                            label: '틀린 문항 수',
                             data: Object.values(unitCounts),
                             backgroundColor: '#6366f1'
                         }]
@@ -576,7 +656,7 @@
                 list = list.filter(e => 
                     e.title.toLowerCase().includes(keyword) || 
                     e.memo.toLowerCase().includes(keyword) ||
-                    e.errorItems.some(i => i.note.toLowerCase().includes(keyword) || i.num.toLowerCase().includes(keyword))
+                    e.errorItems.some(i => i.note.toLowerCase().includes(keyword) || i.num.toLowerCase().includes(keyword) || i.unit.toLowerCase().includes(keyword))
                 );
             }
 
