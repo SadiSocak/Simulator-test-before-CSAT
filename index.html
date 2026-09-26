@@ -199,11 +199,11 @@
                     </div>
                 </div>
 
-                <!-- 틀린 개수 선택 기능 -->
+                <!-- 틀린 개수 선택 기능 (최대 15개로 확장) -->
                 <div class="border-t pt-4 space-y-3">
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <label class="block text-xs font-semibold text-slate-700">
-                            <i class="fa-solid fa-xmark text-rose-500 mr-1"></i>틀린 개수 선택
+                            <i class="fa-solid fa-xmark text-rose-500 mr-1"></i>틀린 개수 선택 (최대 15개)
                         </label>
                         <select id="form-error-count" onchange="generateErrorRowsByCount()" class="border border-indigo-300 bg-indigo-50/50 text-indigo-900 font-bold rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500">
                             <option value="0">0개 (만점/오답 없음)</option>
@@ -217,6 +217,11 @@
                             <option value="8">8개 틀림</option>
                             <option value="9">9개 틀림</option>
                             <option value="10">10개 틀림</option>
+                            <option value="11">11개 틀림</option>
+                            <option value="12">12개 틀림</option>
+                            <option value="13">13개 틀림</option>
+                            <option value="14">14개 틀림</option>
+                            <option value="15">15개 틀림</option>
                         </select>
                     </div>
 
@@ -252,15 +257,36 @@
         </div>
     </div>
 
-    <!-- 이미지 클릭 시 크게 보는 이미지 확대 라이트박스 모달 -->
-    <div id="image-zoom-modal" class="fixed inset-0 bg-black/80 z-[60] flex flex-col items-center justify-center hidden p-4 cursor-pointer" onclick="closeImageZoom()">
-        <div class="relative max-w-4xl max-h-[90vh] flex items-center justify-center">
-            <img id="zoomed-image-target" src="" class="max-w-full max-h-[85vh] rounded-lg shadow-2xl object-contain">
-            <button onclick="closeImageZoom()" class="absolute -top-10 right-0 text-white hover:text-slate-300 text-2xl font-bold">
-                <i class="fa-solid fa-xmark"></i> 닫기
+    <!-- 캔버스(Canvas) 펜 그리기 도구가 추가된 라이트박스 확대 모달 -->
+    <div id="image-zoom-modal" class="fixed inset-0 bg-slate-950/90 z-[60] flex flex-col items-center justify-between hidden p-4 select-none">
+        <!-- 상단 툴바 -->
+        <div class="w-full max-w-4xl flex items-center justify-between text-white bg-slate-900/80 px-4 py-2 rounded-xl border border-slate-800 shadow-lg gap-2 flex-wrap">
+            <div class="flex items-center gap-2 text-xs">
+                <span class="font-bold text-indigo-400"><i class="fa-solid fa-pen-ruler mr-1"></i>손풀기 펜 도구:</span>
+                <!-- 색상 선택 -->
+                <button onclick="setPenColor('#ef4444')" class="w-6 h-6 rounded-full bg-red-500 border-2 border-white hover:scale-110 transition"></button>
+                <button onclick="setPenColor('#3b82f6')" class="w-6 h-6 rounded-full bg-blue-500 border-2 border-white hover:scale-110 transition"></button>
+                <button onclick="setPenColor('#eab308')" class="w-6 h-6 rounded-full bg-yellow-500 border-2 border-white hover:scale-110 transition"></button>
+                <button onclick="setPenColor('#000000')" class="w-6 h-6 rounded-full bg-black border-2 border-white hover:scale-110 transition"></button>
+                <button onclick="setPenColor('#ffffff')" class="w-6 h-6 rounded-full bg-white border-2 border-slate-400 hover:scale-110 transition"></button>
+                
+                <!-- 지우개/초기화 -->
+                <button onclick="clearCanvas()" class="ml-2 bg-rose-600/80 hover:bg-rose-600 text-white px-2.5 py-1 rounded text-xs font-bold transition">
+                    <i class="fa-solid fa-eraser mr-1"></i>필기 전체 지우기
+                </button>
+            </div>
+
+            <button onclick="closeImageZoom()" class="text-slate-300 hover:text-white text-sm font-bold bg-slate-800 px-3 py-1 rounded-lg border border-slate-700">
+                <i class="fa-solid fa-xmark mr-1"></i>닫기
             </button>
         </div>
-        <p class="text-white/80 text-xs mt-3">바탕이나 닫기 버튼을 클릭하면 원래 화면으로 돌아갑니다.</p>
+
+        <!-- 캔버스 그리기 영역 -->
+        <div class="relative max-w-4xl w-full flex-1 my-3 flex items-center justify-center overflow-hidden">
+            <canvas id="drawing-canvas" class="rounded-lg shadow-2xl bg-slate-900 cursor-crosshair border border-slate-800 max-w-full max-h-[75vh] object-contain"></canvas>
+        </div>
+
+        <p class="text-slate-400 text-xs">마우스나 손가락(터치)으로 화면 문제 위에 자유롭게 그리며 풀 수 있습니다. (저장되지 않는 연습용입니다)</p>
     </div>
 
     <!-- JS 스크립트 -->
@@ -274,628 +300,123 @@
         let mathUnitChartInstance = null;
         let tamguUnitChartInstance = null;
 
+        // Canvas Drawing 전용 변수
+        let canvas = null;
+        let ctx = null;
+        let isDrawing = false;
+        let penColor = '#ef4444';
+        let penWidth = 3;
+        let loadedImg = new Image();
+
         window.addEventListener('DOMContentLoaded', () => {
             document.getElementById('form-date').value = new Date().toISOString().substring(0, 10);
+            initCanvas();
             updateDashboardStats();
             renderCharts();
             renderExamList();
         });
 
-        function openModal(editId = null) {
-            document.getElementById('exam-form').reset();
-            document.getElementById('error-items-container').innerHTML = '';
-            document.getElementById('editing-exam-id').value = '';
-            document.getElementById('modal-form-title').innerText = '모의고사 성적 & 오답 등록';
+        // Canvas 초기화
+        function initCanvas() {
+            canvas = document.getElementById('drawing-canvas');
+            ctx = canvas.getContext('2d');
 
-            if(editId) {
-                const exam = examData.find(e => e.id === editId);
-                if(exam) {
-                    document.getElementById('editing-exam-id').value = exam.id;
-                    document.getElementById('modal-form-title').innerText = '모의고사 성적 & 오답 수정';
-                    document.getElementById('form-subject').value = exam.subject;
-                    document.getElementById('form-title').value = exam.title;
-                    document.getElementById('form-date').value = exam.date;
-                    document.getElementById('form-score').value = exam.score;
-                    document.getElementById('form-grade').value = exam.grade;
-                    document.getElementById('form-memo').value = exam.memo || '';
+            // 마우스 이벤트
+            canvas.addEventListener('mousedown', startDrawing);
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('mouseup', stopDrawing);
+            canvas.addEventListener('mouseleave', stopDrawing);
 
-                    const count = exam.errorItems ? exam.errorItems.length : 0;
-                    document.getElementById('form-error-count').value = count;
-                    generateErrorRowsByCount(exam.errorItems);
-                }
-            } else {
-                document.getElementById('form-date').value = new Date().toISOString().substring(0, 10);
-                document.getElementById('form-error-count').value = 1;
-                generateErrorRowsByCount();
-            }
-
-            document.getElementById('exam-modal').classList.remove('hidden');
-        }
-
-        function closeModal() {
-            document.getElementById('exam-modal').classList.add('hidden');
-        }
-
-        function closeDetailModal() {
-            document.getElementById('detail-modal').classList.add('hidden');
-        }
-
-        // 이미지 크게 보기 확대 모달 열기/닫기
-        function zoomImage(src) {
-            document.getElementById('zoomed-image-target').src = src;
-            document.getElementById('image-zoom-modal').classList.remove('hidden');
-        }
-
-        function closeImageZoom() {
-            document.getElementById('image-zoom-modal').classList.add('hidden');
-        }
-
-        function handleSubjectOrCountChange() {
-            generateErrorRowsByCount();
-        }
-
-        // 드롭다운 변경 시 과목 탭도 함께 동기화
-        function handleFilterDropdownChange() {
-            const val = document.getElementById('filter-subject').value;
-            currentTab = val;
-            
-            // 상단 버튼 클래스 업데이트
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.className = "tab-btn px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900";
+            // 터치 이벤트 (모바일)
+            canvas.addEventListener('touchstart', (e) => {
+                const touch = e.touches[0];
+                const mouseEvent = new MouseEvent('mousedown', {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY
+                });
+                canvas.dispatchEvent(mouseEvent);
             });
-            const activeBtn = document.getElementById(`tab-${val}`);
-            if(activeBtn) {
-                activeBtn.className = "tab-btn px-3 py-1.5 rounded-md bg-white text-indigo-600 shadow-sm font-bold";
-            }
+            canvas.addEventListener('touchmove', (e) => {
+                const touch = e.touches[0];
+                const mouseEvent = new MouseEvent('mousemove', {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY
+                });
+                canvas.dispatchEvent(mouseEvent);
+            });
+            canvas.addEventListener('touchend', () => {
+                const전혀 부끄러운 일이 아닙니다! 오답을 제대로 분석하고 기록해 나가는 것이 성적 상승의 가장 빠른 지름길입니다.
 
-            updateDashboardStats();
-            renderCharts();
-            renderExamList();
-        }
+요청하신 **틀린 개수 옵션을 최대 15개까지 확장**하고, 오답 문제 이미지 확대 화면에서 **터치나 마우스로 직접 펜 판서 및 메모를 하고 지울 수 있는 캔버스 기능**을 추가한 전체 코드를 준비했습니다.
 
-        // 개수에 따른 오답 입력란 생성
-        function generateErrorRowsByCount(existingItems = null) {
-            const container = document.getElementById('error-items-container');
-            const count = parseInt(document.getElementById('form-error-count').value);
-            const subject = document.getElementById('form-subject').value;
+GitHub 저장소의 `index.html` 파일에 아래 코드를 그대로 복사해서 덮어씌워주시면 바로 반영됩니다!
 
-            container.innerHTML = '';
+```html
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>모의고사 성적 & 오답 분석 대시보드</title>
+    <!-- Tailwind CSS -->
+    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
+    <!-- Chart.js -->
+    <script src="[https://cdn.jsdelivr.net/npm/chart.js](https://cdn.jsdelivr.net/npm/chart.js)"></script>
+    <!-- FontAwesome Font Icons -->
+    <link rel="stylesheet" href="[https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css](https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css)">
+</head>
+<body class="bg-slate-50 font-sans text-slate-800 antialiased min-h-screen">
 
-            for (let i = 0; i < count; i++) {
-                const data = (existingItems && existingItems[i]) ? existingItems[i] : {};
-                const itemDiv = document.createElement('div');
-                itemDiv.className = "error-item-row bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2 relative";
+    <!-- Header / Navbar -->
+    <header class="bg-indigo-600 text-white shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <i class="fa-solid fa-graduation-cap text-2xl text-indigo-200"></i>
+                <h1 class="text-xl font-bold tracking-tight sm:text-2xl">모고 오답노트 & 성적 분석</h1>
+            </div>
+            <button onclick="openModal()" class="bg-indigo-500 hover:bg-indigo-400 text-white font-medium px-4 py-2 rounded-lg shadow-sm transition flex items-center gap-2 text-sm">
+                <i class="fa-solid fa-plus"></i> 모의고사 등록
+            </button>
+        </div>
+    </header>
 
-                itemDiv.innerHTML = `
-                    <div class="flex items-center justify-between font-bold text-xs text-indigo-900 mb-1">
-                        <span>오답 문항 #${i + 1}</span>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                        <div>
-                            <input type="text" class="err-num border border-slate-300 rounded px-2 py-1.5 text-sm w-full" placeholder="문항 번호 (예: 15번)" value="${data.num || ''}" required>
-                        </div>
-                        <div>
-                            <select class="err-unit border border-slate-300 rounded px-2 py-1.5 text-sm w-full">
-                                ${getUnitOptionsHtml(subject, data.unit)}
-                            </select>
-                        </div>
-                        <div>
-                            <select class="err-reason border border-slate-300 rounded px-2 py-1.5 text-sm w-full" required>
-                                <option value="개념 부족" ${data.reason === '개념 부족' ? 'selected' : ''}>개념/지문 이해 부족</option>
-                                <option value="계산 실수" ${data.reason === '계산 실수' ? 'selected' : ''}>계산/단순 실수</option>
-                                <option value="시간 부족" ${data.reason === '시간 부족' ? 'selected' : ''}>시간 부족</option>
-                                <option value="문제 오독" ${data.reason === '문제 오독' ? 'selected' : ''}>문제 오독/조건 판단 미흡</option>
-                                <option value="찍음/기타" ${data.reason === '찍음/기타' ? 'selected' : ''}>찍음/기타</option>
-                            </select>
-                        </div>
+    <main class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8 space-y-8">
+
+        <!-- 분석 대시보드 섹션 -->
+        <section class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-chart-pie text-indigo-600"></i> 과목별 성적 & 취약점 분석 대시보드
+                    </h2>
+                    <p class="text-sm text-slate-500">과목 탭을 클릭하면 대시보드 통계와 아래 모의고사 목록이 해당 과목 전용으로 자동 변경됩니다.</p>
+                </div>
+                
+                <!-- 과목 선택 탭 -->
+                <div class="flex flex-wrap gap-1 bg-slate-100 p-1 rounded-lg text-sm font-medium">
+                    <button onclick="switchTab('ALL')" id="tab-ALL" class="tab-btn px-3 py-1.5 rounded-md bg-white text-indigo-600 shadow-sm font-bold">전체</button>
+                    <button onclick="switchTab('국어')" id="tab-국어" class="tab-btn px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900">국어</button>
+                    <button onclick="switchTab('수학')" id="tab-수학" class="tab-btn px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900">수학</button>
+                    <button onclick="switchTab('영어')" id="tab-영어" class="tab-btn px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900">영어</button>
+                    <button onclick="switchTab('탐구')" id="tab-탐구" class="tab-btn px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900">탐구</button>
+                </div>
+            </div>
+
+            <!-- 과목별 동적 상단 스탯 카드리스트 -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex items-center space-x-4">
+                    <div class="p-3 bg-indigo-100 text-indigo-600 rounded-lg">
+                        <i class="fa-solid fa-book-bookmark text-xl"></i>
                     </div>
                     <div>
-                        <input type="text" class="err-note border border-slate-300 rounded px-2 py-1.5 text-sm w-full mb-2" placeholder="틀린 원인 분석 및 핵심 메모" value="${data.note || ''}">
-                        
-                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-white p-2 rounded border border-slate-200">
-                            <div class="flex-1">
-                                <label class="block text-[11px] font-semibold text-slate-500 mb-0.5">문제 이미지 / PDF 첨부 및 수정</label>
-                                <input type="file" accept="image/*,application/pdf" class="err-file text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
-                            </div>
-                            <input type="hidden" class="err-file-data" value="${data.fileData || ''}">
-                            <input type="hidden" class="err-file-type" value="${data.fileType || ''}">
-                            ${data.fileData ? `
-                                <div class="flex items-center gap-1 text-xs text-emerald-600 font-bold">
-                                    <i class="fa-solid fa-paperclip"></i> 첨부됨
-                                </div>
-                            ` : ''}
-                        </div>
+                        <p id="label-stat-exams" class="text-xs font-semibold text-slate-500 uppercase">[전체] 응시 시험</p>
+                        <p id="stat-total-exams" class="text-2xl font-bold text-slate-800">0회</p>
                     </div>
-                `;
-                container.appendChild(itemDiv);
-            }
-        }
-
-        function getUnitOptionsHtml(subject, selectedValue = '') {
-            if (subject === '국어') {
-                return `
-                    <option value="기타" ${selectedValue === '기타' ? 'selected' : ''}>영역 선택</option>
-                    <option value="국어-독서" ${selectedValue === '국어-독서' ? 'selected' : ''}>독서 (비문학)</option>
-                    <option value="국어-문학" ${selectedValue === '국어-문학' ? 'selected' : ''}>문학</option>
-                    <option value="국어-화작" ${selectedValue === '국어-화작' ? 'selected' : ''}>선택: 화법과 작문</option>
-                    <option value="국어-언매" ${selectedValue === '국어-언매' ? 'selected' : ''}>선택: 언어와 매체</option>
-                `;
-            } else if (subject === '수학') {
-                return `
-                    <option value="기타" ${selectedValue === '기타' ? 'selected' : ''}>단원 선택</option>
-                    <optgroup label="수학 I">
-                        <option value="수1-지수로그" ${selectedValue === '수1-지수로그' ? 'selected' : ''}>수1: 지수·로그</option>
-                        <option value="수1-삼각함수" ${selectedValue === '수1-삼각함수' ? 'selected' : ''}>수1: 삼각함수</option>
-                        <option value="수1-수열" ${selectedValue === '수1-수열' ? 'selected' : ''}>수1: 수열</option>
-                    </optgroup>
-                    <optgroup label="수학 II">
-                        <option value="수2-함수의극한" ${selectedValue === '수2-함수의극한' ? 'selected' : ''}>수2: 함수의 극한/연속</option>
-                        <option value="수2-미분" ${selectedValue === '수2-미분' ? 'selected' : ''}>수2: 미분</option>
-                        <option value="수2-적분" ${selectedValue === '수2-적분' ? 'selected' : ''}>수2: 적분</option>
-                    </optgroup>
-                    <optgroup label="선택과목">
-                        <option value="선택-확통" ${selectedValue === '선택-확통' ? 'selected' : ''}>선택: 확률과 통계</option>
-                        <option value="선택-미적분" ${selectedValue === '선택-미적분' ? 'selected' : ''}>선택: 미적분</option>
-                        <option value="선택-기하" ${selectedValue === '선택-기하' ? 'selected' : ''}>선택: 기하</option>
-                    </optgroup>
-                `;
-            } else if (subject === '탐구1' || subject === '탐구2') {
-                return `
-                    <option value="기타" ${selectedValue === '기타' ? 'selected' : ''}>유형 선택</option>
-                    <option value="탐구-개념" ${selectedValue === '탐구-개념' ? 'selected' : ''}>개념 이해/암기 미흡</option>
-                    <option value="탐구-자료해석" ${selectedValue === '탐구-자료해석' ? 'selected' : ''}>자료해석/실험 분석 오류</option>
-                    <option value="탐구-계산" ${selectedValue === '탐구-계산' ? 'selected' : ''}>정량 계산 실수</option>
-                `;
-            } else {
-                return `<option value="기타">세부 영역 해당없음</option>`;
-            }
-        }
-
-        async function handleFormSubmit(e) {
-            e.preventDefault();
-
-            const editingId = document.getElementById('editing-exam-id').value;
-            const subject = document.getElementById('form-subject').value;
-            const title = document.getElementById('form-title').value;
-            const date = document.getElementById('form-date').value;
-            const score = parseInt(document.getElementById('form-score').value);
-            const grade = parseInt(document.getElementById('form-grade').value);
-            const memo = document.getElementById('form-memo').value;
-
-            const errorRows = document.querySelectorAll('.error-item-row');
-            const errorItems = [];
-
-            for (let row of errorRows) {
-                const num = row.querySelector('.err-num').value;
-                const unit = row.querySelector('.err-unit') ? row.querySelector('.err-unit').value : '기타';
-                const reason = row.querySelector('.err-reason').value;
-                const note = row.querySelector('.err-note').value;
-                
-                const fileInput = row.querySelector('.err-file');
-                let fileData = row.querySelector('.err-file-data').value;
-                let fileType = row.querySelector('.err-file-type').value;
-
-                if (fileInput.files && fileInput.files[0]) {
-                    const file = fileInput.files[0];
-                    fileType = file.type;
-                    fileData = await readFileAsBase64(file);
-                }
-
-                if (num) {
-                    errorItems.push({ num, unit, reason, note, fileData, fileType });
-                }
-            }
-
-            if(editingId) {
-                const index = examData.findIndex(e => e.id == editingId);
-                if(index !== -1) {
-                    examData[index] = {
-                        id: parseInt(editingId),
-                        subject, title, date, score, grade, memo, errorItems
-                    };
-                }
-            } else {
-                const newExam = {
-                    id: Date.now(),
-                    subject, title, date, score, grade, memo, errorItems
-                };
-                examData.push(newExam);
-            }
-
-            examData.sort((a, b) => new Date(a.date) - new Date(b.date));
-
-            try {
-                localStorage.setItem('mockExamsData', JSON.stringify(examData));
-            } catch (err) {
-                alert('파일 용량이 커서 저장에 실패했습니다. 사진 파일 크기를 줄여서 올려주세요.');
-                return;
-            }
-
-            closeModal();
-            updateDashboardStats();
-            renderCharts();
-            renderExamList();
-        }
-
-        function readFileAsBase64(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result);
-                reader.onerror = error => reject(error);
-                reader.readAsDataURL(file);
-            });
-        }
-
-        function deleteExam(id) {
-            if(confirm('해당 기록을 삭제하시겠습니까?')) {
-                examData = examData.filter(item => item.id !== id);
-                localStorage.setItem('mockExamsData', JSON.stringify(examData));
-                updateDashboardStats();
-                renderCharts();
-                renderExamList();
-            }
-        }
-
-        function getFilteredExams() {
-            if(currentTab === 'ALL') return examData;
-            if(currentTab === '탐구') return examData.filter(e => e.subject === '탐구1' || e.subject === '탐구2');
-            return examData.filter(e => e.subject === currentTab);
-        }
-
-        function updateDashboardStats() {
-            const filteredExams = getFilteredExams();
-            const labelText = currentTab === 'ALL' ? '[전체]' : `[${currentTab}]`;
-
-            document.getElementById('label-stat-exams').innerText = `${labelText} 응시 시험`;
-            document.getElementById('label-stat-errors').innerText = `${labelText} 기록된 오답`;
-            document.getElementById('label-stat-grade').innerText = `${labelText} 최근 등급`;
-            document.getElementById('label-stat-reason').innerText = `${labelText} 최대 오답 원인`;
-
-            document.getElementById('stat-total-exams').innerText = `${filteredExams.length}회`;
-
-            let totalErrors = 0;
-            let reasonCounts = {};
-
-            filteredExams.forEach(exam => {
-                totalErrors += exam.errorItems.length;
-                exam.errorItems.forEach(item => {
-                    reasonCounts[item.reason] = (reasonCounts[item.reason] || 0) + 1;
-                });
-            });
-
-            document.getElementById('stat-total-errors').innerText = `${totalErrors}개`;
-
-            if(filteredExams.length > 0) {
-                const latestExam = filteredExams[filteredExams.length - 1];
-                document.getElementById('stat-recent-grade').innerText = `${latestExam.grade} 등급`;
-            } else {
-                document.getElementById('stat-recent-grade').innerText = `- 등급`;
-            }
-
-            let mainReason = '-';
-            let maxCount = 0;
-            for(const [reason, count] of Object.entries(reasonCounts)) {
-                if(count > maxCount) {
-                    maxCount = count;
-                    mainReason = reason;
-                }
-            }
-            document.getElementById('stat-main-reason').innerText = mainReason;
-        }
-
-        // 상단 과목 탭 클릭 시 목록까지 과목별로 완전 연동
-        function switchTab(tab) {
-            currentTab = tab;
-            
-            // 탭 버튼 스타일
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.className = "tab-btn px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900";
-            });
-            const activeBtn = document.getElementById(`tab-${tab}`);
-            if(activeBtn) {
-                activeBtn.className = "tab-btn px-3 py-1.5 rounded-md bg-white text-indigo-600 shadow-sm font-bold";
-            }
-
-            // 하단 셀렉트 필터도 자동 동기화
-            const filterSelect = document.getElementById('filter-subject');
-            if(filterSelect) filterSelect.value = tab;
-
-            const koreanBox = document.getElementById('korean-analysis-box');
-            const mathBox = document.getElementById('math-analysis-box');
-            const tamguBox = document.getElementById('tamgu-analysis-box');
-            
-            koreanBox.classList.add('hidden');
-            mathBox.classList.add('hidden');
-            tamguBox.classList.add('hidden');
-
-            if(tab === '국어') koreanBox.classList.remove('hidden');
-            else if(tab === '수학') mathBox.classList.remove('hidden');
-            else if(tab === '탐구') tamguBox.classList.remove('hidden');
-
-            updateDashboardStats();
-            renderCharts();
-            renderExamList(); // 목록도 과목에 맞게 렌더링
-        }
-
-        function renderCharts() {
-            const filteredExams = getFilteredExams();
-
-            const scoreCtx = document.getElementById('scoreTrendChart').getContext('2d');
-            if(scoreChartInstance) scoreChartInstance.destroy();
-
-            const labels = filteredExams.map(e => `${e.date.substring(5)} (${e.subject.substring(0,2)})`);
-            const scores = filteredExams.map(e => e.score);
-
-            scoreChartInstance = new Chart(scoreCtx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: '원점수',
-                        data: scores,
-                        borderColor: '#4f46e5',
-                        backgroundColor: 'rgba(79, 70, 229, 0.1)',
-                        fill: true,
-                        tension: 0.3,
-                        pointRadius: 5,
-                        pointHoverRadius: 7
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: { y: { min: 0, max: 100 } }
-                }
-            });
-
-            const reasonCtx = document.getElementById('errorReasonChart').getContext('2d');
-            if(reasonChartInstance) reasonChartInstance.destroy();
-
-            let reasonCounts = { '개념 부족': 0, '계산 실수': 0, '시간 부족': 0, '문제 오독': 0, '찍음/기타': 0 };
-            filteredExams.forEach(e => {
-                e.errorItems.forEach(item => {
-                    if(reasonCounts[item.reason] !== undefined) reasonCounts[item.reason]++;
-                    else reasonCounts['찍음/기타']++;
-                });
-            });
-
-            reasonChartInstance = new Chart(reasonCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: Object.keys(reasonCounts),
-                    datasets: [{
-                        data: Object.values(reasonCounts),
-                        backgroundColor: ['#f43f5e', '#3b82f6', '#f59e0b', '#10b981', '#6b7280']
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { position: 'right' } }
-                }
-            });
-
-            if(currentTab === '국어') {
-                const koreanCtx = document.getElementById('koreanUnitChart').getContext('2d');
-                if(koreanUnitChartInstance) koreanUnitChartInstance.destroy();
-                let korCounts = { "독서 (비문학)": 0, "문학": 0, "선택 (화작/언매)": 0 };
-                filteredExams.forEach(e => {
-                    e.errorItems.forEach(item => {
-                        if(item.unit.includes('독서')) korCounts["독서 (비문학)"]++;
-                        else if(item.unit.includes('문학')) korCounts["문학"]++;
-                        else if(item.unit.includes('화작') || item.unit.includes('언매')) korCounts["선택 (화작/언매)"]++;
-                    });
-                });
-                koreanUnitChartInstance = new Chart(koreanCtx, {
-                    type: 'bar',
-                    data: { labels: Object.keys(korCounts), datasets: [{ label: '틀린 문항 수', data: Object.values(korCounts), backgroundColor: '#10b981' }] },
-                    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
-                });
-            }
-
-            if(currentTab === '수학') {
-                const mathCtx = document.getElementById('mathUnitChart').getContext('2d');
-                if(mathUnitChartInstance) mathUnitChartInstance.destroy();
-                let unitCounts = { "지수·로그": 0, "삼각함수": 0, "수열": 0, "함수의극한": 0, "미분": 0, "적분": 0, "선택과목": 0 };
-                filteredExams.forEach(e => {
-                    e.errorItems.forEach(item => {
-                        if(item.unit.includes('지수로그')) unitCounts["지수·로그"]++;
-                        else if(item.unit.includes('삼각함수')) unitCounts["삼각함수"]++;
-                        else if(item.unit.includes('수열')) unitCounts["수열"]++;
-                        else if(item.unit.includes('함수의극한')) unitCounts["함수의극한"]++;
-                        else if(item.unit.includes('미분')) unitCounts["미분"]++;
-                        else if(item.unit.includes('적분')) unitCounts["적분"]++;
-                        else if(item.unit.includes('선택')) unitCounts["선택과목"]++;
-                    });
-                });
-                mathUnitChartInstance = new Chart(mathCtx, {
-                    type: 'bar',
-                    data: { labels: Object.keys(unitCounts), datasets: [{ label: '틀린 문항 수', data: Object.values(unitCounts), backgroundColor: '#6366f1' }] },
-                    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
-                });
-            }
-
-            if(currentTab === '탐구') {
-                const tamguCtx = document.getElementById('tamguUnitChart').getContext('2d');
-                if(tamguUnitChartInstance) tamguUnitChartInstance.destroy();
-                let tamguCounts = { "탐구1 - 개념미흡": 0, "탐구1 - 자료해석": 0, "탐구2 - 개념미흡": 0, "탐구2 - 자료해석": 0 };
-                filteredExams.forEach(e => {
-                    const prefix = e.subject === '탐구1' ? '탐구1' : '탐구2';
-                    e.errorItems.forEach(item => {
-                        if(item.unit.includes('개념')) tamguCounts[`${prefix} - 개념미흡`]++;
-                        else if(item.unit.includes('자료해석')) tamguCounts[`${prefix} - 자료해석`]++;
-                    });
-                });
-                tamguUnitChartInstance = new Chart(tamguCtx, {
-                    type: 'bar',
-                    data: { labels: Object.keys(tamguCounts), datasets: [{ label: '틀린 문항 수', data: Object.values(tamguCounts), backgroundColor: ['#f59e0b', '#d97706', '#10b981', '#059669'] }] },
-                    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
-                });
-            }
-        }
-
-        // 과목별로 정렬 및 필터링된 모의고사 목록 출력
-        function renderExamList() {
-            const container = document.getElementById('exam-list-container');
-            const keyword = document.getElementById('search-keyword').value.toLowerCase();
-
-            container.innerHTML = '';
-
-            // 과목 필터에 해당되는 모의고사만 추출
-            let list = getFilteredExams().reverse();
-
-            if(keyword) {
-                list = list.filter(e => 
-                    e.title.toLowerCase().includes(keyword) || 
-                    e.memo.toLowerCase().includes(keyword) ||
-                    e.errorItems.some(i => i.note.toLowerCase().includes(keyword) || i.num.toLowerCase().includes(keyword) || i.unit.toLowerCase().includes(keyword))
-                );
-            }
-
-            if(list.length === 0) {
-                container.innerHTML = `
-                    <div class="bg-white p-8 rounded-xl border border-slate-200 text-center text-slate-400">
-                        <i class="fa-solid fa-folder-open text-4xl mb-2"></i>
-                        <p>해당 과목에 등록된 모의고사 기록이 없습니다.</p>
-                    </div>
-                `;
-                return;
-            }
-
-            list.forEach(exam => {
-                const card = document.createElement('div');
-                card.className = "bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden p-5 cursor-pointer hover:border-indigo-300 transition";
-                card.onclick = (e) => {
-                    if(!e.target.closest('.btn-delete') && !e.target.closest('.btn-edit')) {
-                        openDetailModal(exam.id);
-                    }
-                };
-
-                let errorSummaryHtml = exam.errorItems.map(item => `
-                    <span class="inline-flex items-center gap-1 bg-slate-100 text-slate-700 text-xs px-2.5 py-1 rounded-md border border-slate-200">
-                        <strong class="text-rose-600">${item.num}</strong>
-                        ${item.unit && item.unit !== '기타' ? `<span class="text-indigo-600 font-medium">(${item.unit})</span>` : ''}
-                        <span class="text-slate-500">:${item.reason}</span>
-                        ${item.fileData ? `<i class="fa-solid fa-paperclip text-indigo-500 ml-0.5"></i>` : ''}
-                    </span>
-                `).join(' ');
-
-                card.innerHTML = `
-                    <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b pb-3 gap-2">
-                        <div class="flex items-center gap-3">
-                            <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-indigo-100 text-indigo-700">${exam.subject}</span>
-                            <h3 class="font-bold text-slate-800 text-base">${exam.title}</h3>
-                            <span class="text-xs text-slate-400">${exam.date}</span>
-                        </div>
-                        <div class="flex items-center gap-3">
-                            <div class="text-right">
-                                <span class="text-lg font-black text-indigo-600">${exam.score}점</span>
-                                <span class="text-xs font-bold text-slate-500 ml-1">(${exam.grade}등급)</span>
-                            </div>
-                            <div class="flex items-center gap-1 border-l pl-3">
-                                <button onclick="openModal(${exam.id})" class="btn-edit text-slate-400 hover:text-indigo-600 text-sm transition p-1">
-                                    <i class="fa-solid fa-pen"></i>
-                                </button>
-                                <button onclick="deleteExam(${exam.id})" class="btn-delete text-slate-400 hover:text-rose-500 text-sm transition p-1">
-                                    <i class="fa-solid fa-trash-can"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="pt-2 space-y-2">
-                        <p class="text-xs font-bold text-slate-500 flex items-center justify-between">
-                            <span>틀린 문항 요약 (${exam.errorItems.length}개)</span>
-                            <span class="text-indigo-600 text-[11px]">클릭하여 오답/사진 확인 ➔</span>
-                        </p>
-                        <div class="flex flex-wrap gap-1.5">
-                            ${errorSummaryHtml || '<span class="text-xs text-slate-400">틀린 문항 없음 (만점)</span>'}
-                        </div>
-                    </div>
-                `;
-                container.appendChild(card);
-            });
-        }
-
-        // 오답 복습 상세 모달 (사진 확대 지원)
-        function openDetailModal(examId) {
-            const exam = examData.find(e => e.id === examId);
-            if(!exam) return;
-
-            document.getElementById('detail-subject-badge').innerText = exam.subject;
-            document.getElementById('detail-title').innerText = `${exam.title} (${exam.score}점 / ${exam.grade}등급)`;
-
-            const body = document.getElementById('detail-body');
-            
-            let errorDetailsHtml = exam.errorItems.map((item) => {
-                let filePreviewHtml = '';
-                if (item.fileData) {
-                    if (item.fileType && item.fileType.includes('pdf')) {
-                        filePreviewHtml = `
-                            <div class="mt-3">
-                                <p class="text-xs font-bold text-slate-600 mb-1 flex items-center justify-between">
-                                    <span><i class="fa-solid fa-file-pdf text-rose-500 mr-1"></i> 첨부된 PDF 문제:</span>
-                                    <a href="${item.fileData}" target="_blank" class="text-indigo-600 text-[11px] font-bold hover:underline">↗️ 새 창에서 전체 화면으로 보기</a>
-                                </p>
-                                <iframe src="${item.fileData}" class="w-full h-80 rounded-lg border"></iframe>
-                            </div>
-                        `;
-                    } else {
-                        filePreviewHtml = `
-                            <div class="mt-3">
-                                <p class="text-xs font-bold text-slate-600 mb-1 flex items-center justify-between">
-                                    <span><i class="fa-solid fa-image text-indigo-500 mr-1"></i> 첨부된 문제/풀이 사진:</span>
-                                    <span onclick="zoomImage('${item.fileData}')" class="text-indigo-600 cursor-pointer text-[11px] font-bold hover:underline"><i class="fa-solid fa-magnifying-glass-plus"></i> 클릭하여 원본 크게 보기</span>
-                                </p>
-                                <div class="relative group cursor-pointer" onclick="zoomImage('${item.fileData}')">
-                                    <img src="${item.fileData}" class="max-h-80 rounded-lg border object-contain bg-slate-100 p-1 group-hover:opacity-90 transition">
-                                    <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition bg-black/20 rounded-lg">
-                                        <span class="bg-slate-900/80 text-white text-xs px-3 py-1.5 rounded-full font-bold"><i class="fa-solid fa-magnifying-glass-plus mr-1"></i> 크게 보기</span>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                    }
-                }
-
-                return `
-                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
-                        <div class="flex flex-wrap items-center justify-between gap-2 border-b pb-2">
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm font-black text-rose-600 bg-rose-100 px-2.5 py-0.5 rounded">${item.num}번 문항</span>
-                                ${item.unit && item.unit !== '기타' ? `<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded font-bold">${item.unit}</span>` : ''}
-                                <span class="text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded font-medium">원인: ${item.reason}</span>
-                            </div>
-                        </div>
-                        <p class="text-sm text-slate-800 bg-white p-3 rounded-lg border border-slate-100 mt-2">
-                            <i class="fa-solid fa-pen text-indigo-500 mr-1.5"></i><strong>오답 메모 / 개념 복습:</strong> ${item.note || '작성된 메모가 없습니다.'}
-                        </p>
-                        ${filePreviewHtml}
-                    </div>
-                `;
-            }).join('');
-
-            body.innerHTML = `
-                ${exam.memo ? `
-                    <div class="bg-amber-50 p-4 rounded-xl border border-amber-200 text-xs text-amber-900">
-                        <strong class="font-bold"><i class="fa-solid fa-comment-dots mr-1"></i> 시험 총평:</strong> ${exam.memo}
-                    </div>
-                ` : ''}
-                <div class="space-y-4">
-                    <div class="flex justify-between items-center">
-                        <h4 class="text-sm font-bold text-slate-700 flex items-center gap-2">
-                            <i class="fa-solid fa-book-open-reader text-indigo-600"></i> 오답 문제 및 첨부 자료
-                        </h4>
-                        <button onclick="closeDetailModal(); openModal(${exam.id});" class="text-xs bg-indigo-50 text-indigo-600 font-bold px-3 py-1.5 rounded-lg border border-indigo-200 hover:bg-indigo-100 transition">
-                            <i class="fa-solid fa-pen mr-1"></i> 내용/사진 수정하기
-                        </button>
-                    </div>
-                    ${errorDetailsHtml || '<p class="text-xs text-slate-400">등록된 오답 문항이 없습니다. (만점)</p>'}
                 </div>
-            `;
-
-            document.getElementById('detail-modal').classList.remove('hidden');
-        }
-    </script>
-</body>
-</html>
+                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex items-center space-x-4">
+                    <div class="p-3 bg-rose-100 text-rose-600 rounded-lg">
+                        <i class="fa-solid fa-circle-exclamation text-xl"></i>
+                    </div>
+                    <div>
+                        <p id="label-stat-errors" class="text-xs font-semibold text-slate-500 uppercase">[전체] 기록된 오답</p>
+                        <p id="stat-total-errors" class="text
