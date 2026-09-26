@@ -130,6 +130,16 @@
                     <canvas id="mathUnitChart"></canvas>
                 </div>
             </div>
+
+            <!-- 탐구 전용: 탐구1/탐구2 & 개념/자료해석 분석 차트 -->
+            <div id="tamgu-analysis-box" class="hidden bg-amber-50/50 p-5 rounded-xl border border-amber-100 space-y-3">
+                <h3 class="text-sm font-bold text-amber-900 flex items-center gap-2">
+                    <i class="fa-solid fa-vial text-amber-600"></i> [탐구 전용] 탐구1 vs 탐구2 & 유형별 오답 분석
+                </h3>
+                <div class="h-60 relative">
+                    <canvas id="tamguUnitChart"></canvas>
+                </div>
+            </div>
         </section>
 
         <!-- 성적 및 오답 기록 목록 섹션 -->
@@ -187,7 +197,7 @@
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">시험명 / 회차 <span class="text-rose-500">*</span></label>
-                        <input type="text" id="form-title" required placeholder="예: 3월 학평, 이감 1회차" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <input type="text" id="form-title" required placeholder="예: 3월 학평, 시대인재 1회차" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">응시 일자</label>
@@ -244,6 +254,7 @@
         let reasonChartInstance = null;
         let koreanUnitChartInstance = null;
         let mathUnitChartInstance = null;
+        let tamguUnitChartInstance = null;
 
         // 초기화 함수
         window.addEventListener('DOMContentLoaded', () => {
@@ -271,7 +282,6 @@
         function toggleSubjectFields() {
             const subject = document.getElementById('form-subject').value;
             const container = document.getElementById('error-items-container');
-            // 기존 등록된 필드들의 드롭다운을 과목에 맞게 재구성
             const rows = container.querySelectorAll('.error-item-row');
             rows.forEach(row => {
                 const unitSelect = row.querySelector('.err-unit');
@@ -281,7 +291,7 @@
             });
         }
 
-        // 과목에 맞는 세부 단원 드롭다운 HTML 생성
+        // 과목에 맞는 세부 단원/유형 드롭다운 HTML 생성
         function getUnitOptionsHtml(subject, selectedValue = '') {
             if (subject === '국어') {
                 return `
@@ -309,6 +319,13 @@
                         <option value="선택-미적분" ${selectedValue === '선택-미적분' ? 'selected' : ''}>선택: 미적분</option>
                         <option value="선택-기하" ${selectedValue === '선택-기하' ? 'selected' : ''}>선택: 기하</option>
                     </optgroup>
+                `;
+            } else if (subject === '탐구1' || subject === '탐구2') {
+                return `
+                    <option value="기타" ${selectedValue === '기타' ? 'selected' : ''}>유형 선택</option>
+                    <option value="탐구-개념" ${selectedValue === '탐구-개념' ? 'selected' : ''}>개념 이해/암기 미흡</option>
+                    <option value="탐구-자료해석" ${selectedValue === '탐구-자료해석' ? 'selected' : ''}>자료해석/실험 분석 오류</option>
+                    <option value="탐구-계산" ${selectedValue === '탐구-계산' ? 'selected' : ''}>정량 계산 실수</option>
                 `;
             } else {
                 return `<option value="기타">세부 영역 해당없음</option>`;
@@ -462,7 +479,6 @@
         function switchTab(tab) {
             currentTab = tab;
             
-            // 버튼 스타일 업데이트
             document.querySelectorAll('.tab-btn').forEach(btn => {
                 btn.className = "tab-btn px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900";
             });
@@ -471,22 +487,22 @@
                 activeBtn.className = "tab-btn px-3 py-1.5 rounded-md bg-white text-indigo-600 shadow-sm font-bold";
             }
 
-            // 과목별 전용 박스 표시/숨김
             const koreanBox = document.getElementById('korean-analysis-box');
             const mathBox = document.getElementById('math-analysis-box');
+            const tamguBox = document.getElementById('tamgu-analysis-box');
             
+            koreanBox.classList.add('hidden');
+            mathBox.classList.add('hidden');
+            tamguBox.classList.add('hidden');
+
             if(tab === '국어') {
                 koreanBox.classList.remove('hidden');
-                mathBox.classList.add('hidden');
             } else if(tab === '수학') {
                 mathBox.classList.remove('hidden');
-                koreanBox.classList.add('hidden');
-            } else {
-                koreanBox.classList.add('hidden');
-                mathBox.classList.add('hidden');
+            } else if(tab === '탐구') {
+                tamguBox.classList.remove('hidden');
             }
 
-            // 데이터 갱신
             updateDashboardStats();
             renderCharts();
         }
@@ -625,6 +641,46 @@
                             label: '틀린 문항 수',
                             data: Object.values(unitCounts),
                             backgroundColor: '#6366f1'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                        }
+                    }
+                });
+            }
+
+            // 5. 탐구 세부 차트 (탐구 탭 활성화 시)
+            if(currentTab === '탐구') {
+                const tamguCtx = document.getElementById('tamguUnitChart').getContext('2d');
+                if(tamguUnitChartInstance) tamguUnitChartInstance.destroy();
+
+                let tamguCounts = {
+                    "탐구1 - 개념미흡": 0,
+                    "탐구1 - 자료해석": 0,
+                    "탐구2 - 개념미흡": 0,
+                    "탐구2 - 자료해석": 0
+                };
+
+                filteredExams.forEach(e => {
+                    const prefix = e.subject === '탐구1' ? '탐구1' : '탐구2';
+                    e.errorItems.forEach(item => {
+                        if(item.unit.includes('개념')) tamguCounts[`${prefix} - 개념미흡`]++;
+                        else if(item.unit.includes('자료해석')) tamguCounts[`${prefix} - 자료해석`]++;
+                    });
+                });
+
+                tamguUnitChartInstance = new Chart(tamguCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: Object.keys(tamguCounts),
+                        datasets: [{
+                            label: '틀린 문항 수',
+                            data: Object.values(tamguCounts),
+                            backgroundColor: ['#f59e0b', '#d97706', '#10b981', '#059669']
                         }]
                     },
                     options: {
