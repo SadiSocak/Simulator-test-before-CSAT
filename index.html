@@ -11,9 +11,9 @@
     <!-- FontAwesome Font Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* 캔버스 펜 필기 시 브라우저 스크롤/이동 완벽 차단 */
+        /* 캔버스: 손가락으로 드래그 시 스크롤 허용, 펜일 때는 드로잉 처리 */
         #zoom-canvas {
-            touch-action: none;
+            touch-action: pan-x pan-y;
             -webkit-user-select: none;
             user-select: none;
         }
@@ -274,7 +274,7 @@
         </div>
     </div>
 
-    <!-- 캔버스 모달 -->
+    <!-- 캔버스 모달 (태블릿 직접선택 완벽 터치 연동 & 손가락 화면 이동 기능) -->
     <div id="image-zoom-modal" onclick="handleOutsideClick(event, 'image-zoom-modal')" class="fixed inset-0 bg-black/90 z-[100] flex flex-col items-center justify-between hidden p-2 sm:p-4 select-none">
         <div class="w-full max-w-4xl bg-slate-800/95 text-white px-4 py-2 rounded-t-xl flex flex-wrap items-center justify-between gap-3 border-b border-slate-700 z-10">
             <div class="flex items-center gap-3 flex-wrap">
@@ -295,11 +295,12 @@
                     <button onclick="setPenColor('#f59e0b')" class="w-6 h-6 rounded-full bg-amber-500 border-2 border-white hover:scale-110 transition shadow"></button>
                     <button onclick="setPenColor('#ffffff')" class="w-6 h-6 rounded-full bg-white border-2 border-slate-300 hover:scale-110 transition shadow"></button>
 
-                    <label id="picker-btn-label" class="relative cursor-pointer flex items-center gap-1 bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-xs text-slate-200 font-bold transition">
+                    <!-- 태블릿 터치 완벽 호환 직접선택 컬러피커 -->
+                    <div onclick="triggerColorPicker()" class="relative cursor-pointer flex items-center gap-1 bg-slate-700 hover:bg-slate-600 px-2.5 py-1 rounded text-xs text-slate-200 font-bold transition active:scale-95">
                         <i class="fa-solid fa-palette text-indigo-400"></i>
                         <span id="picker-label-text">직접선택</span>
                         <input type="color" id="color-picker" oninput="setPenColor(this.value)" onchange="setPenColor(this.value)" class="opacity-0 absolute inset-0 w-full h-full cursor-pointer">
-                    </label>
+                    </div>
                 </div>
 
                 <div class="flex items-center gap-2 border-l border-slate-700 pl-3">
@@ -323,7 +324,7 @@
             <canvas id="zoom-canvas" class="cursor-crosshair max-w-full max-h-[78vh] object-contain"></canvas>
         </div>
         <p class="text-white/60 text-[11px] mt-2 text-center">
-            <i class="fa-solid fa-pen-nib mr-1"></i><strong>스타일러스 펜</strong>으로 쓰면 딜레이 및 끊김 없이 부드럽게 필기됩니다.
+            <i class="fa-solid fa-hand-pointer mr-1"></i><strong>터치펜</strong>으로 필기하며, <strong>손가락</strong>으로 사진을 쓸어올리면 화면이 이동(스크롤)됩니다.
         </p>
     </div>
 
@@ -390,12 +391,24 @@
             
             zoomCanvas = document.getElementById('zoom-canvas');
             zoomCtx = zoomCanvas.getContext('2d');
-            setupFastPenEvents(); // 고성능 저지연 펜 이벤트 등록
+            setupFastPenEvents();
 
             updateDashboardStats();
             renderCharts();
             renderExamList();
         });
+
+        // 태블릿용 직접선택 피커 강제 트리거
+        function triggerColorPicker() {
+            const picker = document.getElementById('color-picker');
+            if (picker) {
+                if ('showPicker' in HTMLInputElement.prototype) {
+                    try { picker.showPicker(); } catch (e) { picker.click(); }
+                } else {
+                    picker.click();
+                }
+            }
+        }
 
         function handleOutsideClick(event, modalId) {
             if (event.target.id === modalId) {
@@ -565,7 +578,7 @@
             }
         }
 
-        // --- 딜레이 및 스크롤 충돌을 완벽히 잡은 고성능 펜 드로잉 엔진 ---
+        // --- 스타일러스 펜 전용 드로잉 & 손가락 화면 스크롤(이동) 분리 핸들러 ---
         function setupFastPenEvents() {
             const getPos = (e) => {
                 const rect = zoomCanvas.getBoundingClientRect();
@@ -575,11 +588,13 @@
             };
 
             zoomCanvas.addEventListener('pointerdown', (e) => {
+                // 손가락(touch) 입력 시 preventDefault()를 실행하지 않아 브라우저 기본 화면 스크롤이 자연스럽게 작동
                 if (e.pointerType === 'touch') {
                     isDrawing = false;
-                    return; // 손가락은 이동용으로 유지
+                    return;
                 }
 
+                // 터치펜(pen) / 마우스(mouse) 입력 시 화면 스크롤을 막고 드로잉 수행
                 e.preventDefault();
                 isDrawing = true;
                 try { zoomCanvas.setPointerCapture(e.pointerId); } catch (err) {}
@@ -664,6 +679,7 @@
                             </select>
                         </div>
                         <div>
+                            <!-- 통일된 오답 원인 옵션 리스트 -->
                             <select class="err-reason border border-slate-300 rounded-lg px-2 py-1.5 text-xs w-full" required>
                                 <option value="개념 부족" ${data.reason === '개념 부족' ? 'selected' : ''}>개념/지문 이해 부족</option>
                                 <option value="계산 실수" ${data.reason === '계산 실수' ? 'selected' : ''}>계산/단순 실수</option>
@@ -726,7 +742,7 @@
             } else if (subject === '탐구1' || subject === '탐구2') {
                 return `
                     <option value="기타" ${selectedValue === '기타' ? 'selected' : ''}>유형 선택</option>
-                    <option value="탐구-개념" ${selectedValue === '탐구-개념' ? 'selected' : ''}>개념 이해/암기 미흡</option>
+                    <option value="탐구-개념" ${selectedValue === '탐구-개념' ? 'selected' : ''}>개념/원리 이해 미흡</option>
                     <option value="탐구-자료해석" ${selectedValue === '탐구-자료해석' ? 'selected' : ''}>자료해석/실험 분석 오류</option>
                     <option value="탐구-계산" ${selectedValue === '탐구-계산' ? 'selected' : ''}>정량 계산 실수</option>
                 `;
