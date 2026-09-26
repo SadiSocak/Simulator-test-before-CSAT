@@ -28,54 +28,14 @@
 
     <main class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8 space-y-8">
 
-        <!-- 요약 스탯 카드리스트 -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center space-x-4">
-                <div class="p-3 bg-indigo-100 text-indigo-600 rounded-lg">
-                    <i class="fa-solid fa-book-bookmark text-2xl"></i>
-                </div>
-                <div>
-                    <p class="text-xs font-semibold text-slate-500 uppercase">총 응시 시험</p>
-                    <p id="stat-total-exams" class="text-2xl font-bold text-slate-800">0회</p>
-                </div>
-            </div>
-            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center space-x-4">
-                <div class="p-3 bg-rose-100 text-rose-600 rounded-lg">
-                    <i class="fa-solid fa-circle-exclamation text-2xl"></i>
-                </div>
-                <div>
-                    <p class="text-xs font-semibold text-slate-500 uppercase">기록된 총 오답</p>
-                    <p id="stat-total-errors" class="text-2xl font-bold text-slate-800">0개</p>
-                </div>
-            </div>
-            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center space-x-4">
-                <div class="p-3 bg-emerald-100 text-emerald-600 rounded-lg">
-                    <i class="fa-solid fa-chart-line text-2xl"></i>
-                </div>
-                <div>
-                    <p class="text-xs font-semibold text-slate-500 uppercase">최근 수학 등급</p>
-                    <p id="stat-math-grade" class="text-2xl font-bold text-slate-800">- 등급</p>
-                </div>
-            </div>
-            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center space-x-4">
-                <div class="p-3 bg-amber-100 text-amber-600 rounded-lg">
-                    <i class="fa-solid fa-triangle-exclamation text-2xl"></i>
-                </div>
-                <div>
-                    <p class="text-xs font-semibold text-slate-500 uppercase">주요 오답 원인</p>
-                    <p id="stat-main-reason" class="text-base font-bold text-slate-800 truncate max-w-[140px]">-</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- 분석 대시보드 섹션 -->
+        <!-- 분석 대시보드 섹션 (과목 탭을 위로 배치) -->
         <section class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-6">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
                 <div>
                     <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
                         <i class="fa-solid fa-chart-pie text-indigo-600"></i> 과목별 성적 & 취약점 분석 대시보드
                     </h2>
-                    <p class="text-sm text-slate-500">원하는 과목 탭을 클릭하여 과목별/단원별 분석을 확인하세요.</p>
+                    <p class="text-sm text-slate-500">원하는 과목 탭을 클릭하면 상단 통계와 차트가 해당 과목 기준으로 맞춰집니다.</p>
                 </div>
                 
                 <!-- 과목 선택 탭 -->
@@ -88,8 +48,48 @@
                 </div>
             </div>
 
+            <!-- 과목별 동적 상단 스탯 카드리스트 -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex items-center space-x-4">
+                    <div class="p-3 bg-indigo-100 text-indigo-600 rounded-lg">
+                        <i class="fa-solid fa-book-bookmark text-xl"></i>
+                    </div>
+                    <div>
+                        <p id="label-stat-exams" class="text-xs font-semibold text-slate-500 uppercase">총 응시 시험</p>
+                        <p id="stat-total-exams" class="text-2xl font-bold text-slate-800">0회</p>
+                    </div>
+                </div>
+                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex items-center space-x-4">
+                    <div class="p-3 bg-rose-100 text-rose-600 rounded-lg">
+                        <i class="fa-solid fa-circle-exclamation text-xl"></i>
+                    </div>
+                    <div>
+                        <p id="label-stat-errors" class="text-xs font-semibold text-slate-500 uppercase">기록된 총 오답</p>
+                        <p id="stat-total-errors" class="text-2xl font-bold text-slate-800">0개</p>
+                    </div>
+                </div>
+                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex items-center space-x-4">
+                    <div class="p-3 bg-emerald-100 text-emerald-600 rounded-lg">
+                        <i class="fa-solid fa-chart-line text-xl"></i>
+                    </div>
+                    <div>
+                        <p id="label-stat-grade" class="text-xs font-semibold text-slate-500 uppercase">최근 등급</p>
+                        <p id="stat-recent-grade" class="text-2xl font-bold text-slate-800">- 등급</p>
+                    </div>
+                </div>
+                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex items-center space-x-4">
+                    <div class="p-3 bg-amber-100 text-amber-600 rounded-lg">
+                        <i class="fa-solid fa-triangle-exclamation text-xl"></i>
+                    </div>
+                    <div>
+                        <p id="label-stat-reason" class="text-xs font-semibold text-slate-500 uppercase">최대 오답 원인</p>
+                        <p id="stat-main-reason" class="text-base font-bold text-slate-800 truncate max-w-[140px]">-</p>
+                    </div>
+                </div>
+            </div>
+
             <!-- 차트 영역 -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-2">
                 <!-- 원점수 추이 차트 -->
                 <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
                     <h3 class="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
@@ -234,19 +234,9 @@
         let reasonChartInstance = null;
         let mathUnitChartInstance = null;
 
-        // 수학 세부 단원 목록
-        const mathUnits = {
-            "수1": ["수1-지수로그", "수1-삼각함수", "수1-수열"],
-            "수2": ["수2-함수의극한", "수2-미분", "수2-적분"],
-            "선택": ["선택-확통", "선택-미적분", "선택-기하"]
-        };
-
         // 초기화 함수
         window.addEventListener('DOMContentLoaded', () => {
-            // 오늘 날짜 기본 세팅
             document.getElementById('form-date').value = new Date().toISOString().substring(0, 10);
-            
-            // 데이터 렌더링
             updateDashboardStats();
             renderCharts();
             renderExamList();
@@ -257,7 +247,7 @@
             document.getElementById('exam-form').reset();
             document.getElementById('error-items-container').innerHTML = '';
             document.getElementById('form-date').value = new Date().toISOString().substring(0, 10);
-            addErrorItemField(); // 기본 1개 세팅
+            addErrorItemField();
             toggleMathFields();
             document.getElementById('exam-modal').classList.remove('hidden');
         }
@@ -277,7 +267,6 @@
         // 오답 문항 필드 동적 추가
         function addErrorItemField(data = {}) {
             const container = document.getElementById('error-items-container');
-            const itemIndex = container.children.length;
             const isMath = document.getElementById('form-subject').value === '수학';
 
             const itemDiv = document.createElement('div');
@@ -336,7 +325,6 @@
             const grade = parseInt(document.getElementById('form-grade').value);
             const memo = document.getElementById('form-memo').value;
 
-            // 오답 문항 추출
             const errorRows = document.querySelectorAll('.error-item-row');
             const errorItems = [];
             errorRows.forEach(row => {
@@ -361,10 +349,8 @@
             };
 
             examData.push(newExam);
-            // 날짜순 정렬
             examData.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-            // 저장 및 갱신
             localStorage.setItem('mockExamsData', JSON.stringify(examData));
             closeModal();
             updateDashboardStats();
@@ -383,14 +369,32 @@
             }
         }
 
-        // 상단 스탯 업데이트
+        // 과목 필터에 맞춘 스탯 데이터 추출 헬퍼 함수
+        function getFilteredExams() {
+            if(currentTab === 'ALL') return examData;
+            if(currentTab === '탐구') return examData.filter(e => e.subject === '탐구1' || e.subject === '탐구2');
+            return examData.filter(e => e.subject === currentTab);
+        }
+
+        // 상단 스탯 업데이트 (과목 탭 맞춤 반영)
         function updateDashboardStats() {
-            document.getElementById('stat-total-exams').innerText = `${examData.length}회`;
-            
+            const filteredExams = getFilteredExams();
+
+            // 라벨명 업데이트
+            const labelPrefix = currentTab === 'ALL' ? '' : `[${currentTab}] `;
+            document.getElementById('label-stat-exams').innerText = `${labelPrefix}응시 시험`;
+            document.getElementById('label-stat-errors').innerText = `${labelPrefix}기록된 오답`;
+            document.getElementById('label-stat-grade').innerText = `${labelPrefix}최근 등급`;
+            document.getElementById('label-stat-reason').innerText = `${labelPrefix}최대 오답 원인`;
+
+            // 1. 총 응시 시험
+            document.getElementById('stat-total-exams').innerText = `${filteredExams.length}회`;
+
+            // 2. 총 오답 & 오답 원인 집계
             let totalErrors = 0;
             let reasonCounts = {};
 
-            examData.forEach(exam => {
+            filteredExams.forEach(exam => {
                 totalErrors += exam.errorItems.length;
                 exam.errorItems.forEach(item => {
                     reasonCounts[item.reason] = (reasonCounts[item.reason] || 0) + 1;
@@ -399,15 +403,15 @@
 
             document.getElementById('stat-total-errors').innerText = `${totalErrors}개`;
 
-            // 최근 수학 등급
-            const mathExams = examData.filter(e => e.subject === '수학');
-            if(mathExams.length > 0) {
-                document.getElementById('stat-math-grade').innerText = `${mathExams[mathExams.length - 1].grade} 등급`;
+            // 3. 최근 등급
+            if(filteredExams.length > 0) {
+                const latestExam = filteredExams[filteredExams.length - 1];
+                document.getElementById('stat-recent-grade').innerText = `${latestExam.grade} 등급`;
             } else {
-                document.getElementById('stat-math-grade').innerText = `- 등급`;
+                document.getElementById('stat-recent-grade').innerText = `- 등급`;
             }
 
-            // 가장 높은 비율 오답 원인
+            // 4. 주요 오답 원인
             let mainReason = '-';
             let maxCount = 0;
             for(const [reason, count] of Object.entries(reasonCounts)) {
@@ -430,7 +434,6 @@
                 activeBtn.className = "tab-btn px-3 py-1.5 rounded-md bg-white text-indigo-600 shadow-sm font-bold";
             }
 
-            // 수학 박스 표시 여부
             const mathBox = document.getElementById('math-analysis-box');
             if(tab === '수학') {
                 mathBox.classList.remove('hidden');
@@ -438,20 +441,14 @@
                 mathBox.classList.add('hidden');
             }
 
+            // 탭 변경 시 상단 스탯과 차트 동시에 업데이트
+            updateDashboardStats();
             renderCharts();
         }
 
         // 차트 렌더링 함수
         function renderCharts() {
-            // 필터링된 데이터
-            let filteredExams = examData;
-            if(currentTab !== 'ALL') {
-                if(currentTab === '탐구') {
-                    filteredExams = examData.filter(e => e.subject === '탐구1' || e.subject === '탐구2');
-                } else {
-                    filteredExams = examData.filter(e => e.subject === currentTab);
-                }
-            }
+            const filteredExams = getFilteredExams();
 
             // 1. 원점수 추이 차트
             const scoreCtx = document.getElementById('scoreTrendChart').getContext('2d');
@@ -528,8 +525,7 @@
                     "선택과목": 0
                 };
 
-                const mathExams = examData.filter(e => e.subject === '수학');
-                mathExams.forEach(e => {
+                filteredExams.forEach(e => {
                     e.errorItems.forEach(item => {
                         if(item.unit.includes('지수로그')) unitCounts["지수·로그"]++;
                         else if(item.unit.includes('삼각함수')) unitCounts["삼각함수"]++;
@@ -570,7 +566,7 @@
 
             container.innerHTML = '';
 
-            let list = [...examData].reverse(); // 최신순
+            let list = [...examData].reverse();
 
             if(subjectFilter !== 'ALL') {
                 list = list.filter(e => e.subject === subjectFilter);
