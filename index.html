@@ -35,7 +35,7 @@
                     <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
                         <i class="fa-solid fa-chart-pie text-indigo-600"></i> 과목별 성적 & 취약점 분석 대시보드
                     </h2>
-                    <p class="text-sm text-slate-500">과목 탭을 클릭하면 상단 카드와 차트가 선택한 과목 기준으로 변경됩니다.</p>
+                    <p class="text-sm text-slate-500">과목 탭을 클릭하면 대시보드 통계와 아래 모의고사 목록이 해당 과목 전용으로 자동 변경됩니다.</p>
                 </div>
                 
                 <!-- 과목 선택 탭 -->
@@ -137,14 +137,15 @@
                     <i class="fa-solid fa-list-check text-indigo-600"></i> 등록된 모의고사 목록
                 </h2>
                 <div class="flex items-center gap-2">
-                    <select id="filter-subject" onchange="renderExamList()" class="bg-white border border-slate-300 text-slate-700 text-sm rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500">
+                    <select id="filter-subject" onchange="handleFilterDropdownChange()" class="bg-white border border-slate-300 text-slate-700 text-sm rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 font-semibold">
                         <option value="ALL">전체 과목 보기</option>
-                        <option value="국어">국어</option>
-                        <option value="수학">수학</option>
-                        <option value="영어">영어</option>
-                        <option value="한국사">한국사</option>
-                        <option value="탐구1">탐구1</option>
-                        <option value="탐구2">탐구2</option>
+                        <option value="국어">국어만 보기</option>
+                        <option value="수학">수학만 보기</option>
+                        <option value="영어">영어만 보기</option>
+                        <option value="한국사">한국사만 보기</option>
+                        <option value="탐구">탐구 전체만 보기</option>
+                        <option value="탐구1">탐구1만 보기</option>
+                        <option value="탐구2">탐구2만 보기</option>
                     </select>
                     <input type="text" id="search-keyword" oninput="renderExamList()" placeholder="시험명/메모/단원 검색..." class="bg-white border border-slate-300 text-slate-700 text-sm rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 w-44 sm:w-60">
                 </div>
@@ -251,6 +252,17 @@
         </div>
     </div>
 
+    <!-- 이미지 클릭 시 크게 보는 이미지 확대 라이트박스 모달 -->
+    <div id="image-zoom-modal" class="fixed inset-0 bg-black/80 z-[60] flex flex-col items-center justify-center hidden p-4 cursor-pointer" onclick="closeImageZoom()">
+        <div class="relative max-w-4xl max-h-[90vh] flex items-center justify-center">
+            <img id="zoomed-image-target" src="" class="max-w-full max-h-[85vh] rounded-lg shadow-2xl object-contain">
+            <button onclick="closeImageZoom()" class="absolute -top-10 right-0 text-white hover:text-slate-300 text-2xl font-bold">
+                <i class="fa-solid fa-xmark"></i> 닫기
+            </button>
+        </div>
+        <p class="text-white/80 text-xs mt-3">바탕이나 닫기 버튼을 클릭하면 원래 화면으로 돌아갑니다.</p>
+    </div>
+
     <!-- JS 스크립트 -->
     <script>
         let examData = JSON.parse(localStorage.getItem('mockExamsData')) || [];
@@ -308,8 +320,37 @@
             document.getElementById('detail-modal').classList.add('hidden');
         }
 
+        // 이미지 크게 보기 확대 모달 열기/닫기
+        function zoomImage(src) {
+            document.getElementById('zoomed-image-target').src = src;
+            document.getElementById('image-zoom-modal').classList.remove('hidden');
+        }
+
+        function closeImageZoom() {
+            document.getElementById('image-zoom-modal').classList.add('hidden');
+        }
+
         function handleSubjectOrCountChange() {
             generateErrorRowsByCount();
+        }
+
+        // 드롭다운 변경 시 과목 탭도 함께 동기화
+        function handleFilterDropdownChange() {
+            const val = document.getElementById('filter-subject').value;
+            currentTab = val;
+            
+            // 상단 버튼 클래스 업데이트
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.className = "tab-btn px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900";
+            });
+            const activeBtn = document.getElementById(`tab-${val}`);
+            if(activeBtn) {
+                activeBtn.className = "tab-btn px-3 py-1.5 rounded-md bg-white text-indigo-600 shadow-sm font-bold";
+            }
+
+            updateDashboardStats();
+            renderCharts();
+            renderExamList();
         }
 
         // 개수에 따른 오답 입력란 생성
@@ -446,7 +487,6 @@
             }
 
             if(editingId) {
-                // 수정 모드
                 const index = examData.findIndex(e => e.id == editingId);
                 if(index !== -1) {
                     examData[index] = {
@@ -455,7 +495,6 @@
                     };
                 }
             } else {
-                // 신규 등록
                 const newExam = {
                     id: Date.now(),
                     subject, title, date, score, grade, memo, errorItems
@@ -544,8 +583,11 @@
             document.getElementById('stat-main-reason').innerText = mainReason;
         }
 
+        // 상단 과목 탭 클릭 시 목록까지 과목별로 완전 연동
         function switchTab(tab) {
             currentTab = tab;
+            
+            // 탭 버튼 스타일
             document.querySelectorAll('.tab-btn').forEach(btn => {
                 btn.className = "tab-btn px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900";
             });
@@ -553,6 +595,10 @@
             if(activeBtn) {
                 activeBtn.className = "tab-btn px-3 py-1.5 rounded-md bg-white text-indigo-600 shadow-sm font-bold";
             }
+
+            // 하단 셀렉트 필터도 자동 동기화
+            const filterSelect = document.getElementById('filter-subject');
+            if(filterSelect) filterSelect.value = tab;
 
             const koreanBox = document.getElementById('korean-analysis-box');
             const mathBox = document.getElementById('math-analysis-box');
@@ -568,6 +614,7 @@
 
             updateDashboardStats();
             renderCharts();
+            renderExamList(); // 목록도 과목에 맞게 렌더링
         }
 
         function renderCharts() {
@@ -687,17 +734,15 @@
             }
         }
 
-        // 목록 카드 생성
+        // 과목별로 정렬 및 필터링된 모의고사 목록 출력
         function renderExamList() {
             const container = document.getElementById('exam-list-container');
-            const subjectFilter = document.getElementById('filter-subject').value;
             const keyword = document.getElementById('search-keyword').value.toLowerCase();
 
             container.innerHTML = '';
 
-            let list = [...examData].reverse();
-
-            if(subjectFilter !== 'ALL') list = list.filter(e => e.subject === subjectFilter);
+            // 과목 필터에 해당되는 모의고사만 추출
+            let list = getFilteredExams().reverse();
 
             if(keyword) {
                 list = list.filter(e => 
@@ -711,7 +756,7 @@
                 container.innerHTML = `
                     <div class="bg-white p-8 rounded-xl border border-slate-200 text-center text-slate-400">
                         <i class="fa-solid fa-folder-open text-4xl mb-2"></i>
-                        <p>등록된 모의고사 기록이 없습니다.</p>
+                        <p>해당 과목에 등록된 모의고사 기록이 없습니다.</p>
                     </div>
                 `;
                 return;
@@ -772,7 +817,7 @@
             });
         }
 
-        // 클릭 시 오답 복습 상세 모달 열기
+        // 오답 복습 상세 모달 (사진 확대 지원)
         function openDetailModal(examId) {
             const exam = examData.find(e => e.id === examId);
             if(!exam) return;
@@ -788,15 +833,26 @@
                     if (item.fileType && item.fileType.includes('pdf')) {
                         filePreviewHtml = `
                             <div class="mt-3">
-                                <p class="text-xs font-bold text-slate-600 mb-1"><i class="fa-solid fa-file-pdf text-rose-500"></i> 첨부된 PDF 문제:</p>
+                                <p class="text-xs font-bold text-slate-600 mb-1 flex items-center justify-between">
+                                    <span><i class="fa-solid fa-file-pdf text-rose-500 mr-1"></i> 첨부된 PDF 문제:</span>
+                                    <a href="${item.fileData}" target="_blank" class="text-indigo-600 text-[11px] font-bold hover:underline">↗️ 새 창에서 전체 화면으로 보기</a>
+                                </p>
                                 <iframe src="${item.fileData}" class="w-full h-80 rounded-lg border"></iframe>
                             </div>
                         `;
                     } else {
                         filePreviewHtml = `
                             <div class="mt-3">
-                                <p class="text-xs font-bold text-slate-600 mb-1"><i class="fa-solid fa-image text-indigo-500"></i> 첨부된 문제/풀이 사진:</p>
-                                <img src="${item.fileData}" class="max-h-96 rounded-lg border object-contain bg-slate-100 p-1">
+                                <p class="text-xs font-bold text-slate-600 mb-1 flex items-center justify-between">
+                                    <span><i class="fa-solid fa-image text-indigo-500 mr-1"></i> 첨부된 문제/풀이 사진:</span>
+                                    <span onclick="zoomImage('${item.fileData}')" class="text-indigo-600 cursor-pointer text-[11px] font-bold hover:underline"><i class="fa-solid fa-magnifying-glass-plus"></i> 클릭하여 원본 크게 보기</span>
+                                </p>
+                                <div class="relative group cursor-pointer" onclick="zoomImage('${item.fileData}')">
+                                    <img src="${item.fileData}" class="max-h-80 rounded-lg border object-contain bg-slate-100 p-1 group-hover:opacity-90 transition">
+                                    <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition bg-black/20 rounded-lg">
+                                        <span class="bg-slate-900/80 text-white text-xs px-3 py-1.5 rounded-full font-bold"><i class="fa-solid fa-magnifying-glass-plus mr-1"></i> 크게 보기</span>
+                                    </div>
+                                </div>
                             </div>
                         `;
                     }
