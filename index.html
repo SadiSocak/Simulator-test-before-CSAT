@@ -11,9 +11,11 @@
     <!-- FontAwesome Font Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* 캔버스 기본 터치 동작 활성화 (손가락 스크롤 허용) */
+        /* 캔버스 펜 필기 시 브라우저 스크롤/이동 완벽 차단 */
         #zoom-canvas {
-            touch-action: pan-x pan-y;
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
         }
     </style>
 </head>
@@ -272,7 +274,7 @@
         </div>
     </div>
 
-    <!-- 캔버스 모달 (직접선택 연동 & 태블릿 펜/손가락 분리) -->
+    <!-- 캔버스 모달 -->
     <div id="image-zoom-modal" onclick="handleOutsideClick(event, 'image-zoom-modal')" class="fixed inset-0 bg-black/90 z-[100] flex flex-col items-center justify-between hidden p-2 sm:p-4 select-none">
         <div class="w-full max-w-4xl bg-slate-800/95 text-white px-4 py-2 rounded-t-xl flex flex-wrap items-center justify-between gap-3 border-b border-slate-700 z-10">
             <div class="flex items-center gap-3 flex-wrap">
@@ -293,7 +295,6 @@
                     <button onclick="setPenColor('#f59e0b')" class="w-6 h-6 rounded-full bg-amber-500 border-2 border-white hover:scale-110 transition shadow"></button>
                     <button onclick="setPenColor('#ffffff')" class="w-6 h-6 rounded-full bg-white border-2 border-slate-300 hover:scale-110 transition shadow"></button>
 
-                    <!-- 직접선택 컬러 피커 (이벤트 완벽 저장) -->
                     <label id="picker-btn-label" class="relative cursor-pointer flex items-center gap-1 bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-xs text-slate-200 font-bold transition">
                         <i class="fa-solid fa-palette text-indigo-400"></i>
                         <span id="picker-label-text">직접선택</span>
@@ -322,7 +323,7 @@
             <canvas id="zoom-canvas" class="cursor-crosshair max-w-full max-h-[78vh] object-contain"></canvas>
         </div>
         <p class="text-white/60 text-[11px] mt-2 text-center">
-            <i class="fa-solid fa-pen-nib mr-1"></i>태블릿에서는 <strong>스타일러스 펜</strong>으로만 드로잉되며, <strong>손가락</strong>은 화면 스크롤로 사용됩니다.
+            <i class="fa-solid fa-pen-nib mr-1"></i><strong>스타일러스 펜</strong>으로 쓰면 딜레이 및 끊김 없이 부드럽게 필기됩니다.
         </p>
     </div>
 
@@ -347,6 +348,7 @@
         let currentBaseImage = new Image();
         let strokes = [];
         let currentStroke = null;
+        let rafId = null;
 
         const SUBJECT_COLORS = {
             '국어': '#2563eb',
@@ -388,7 +390,7 @@
             
             zoomCanvas = document.getElementById('zoom-canvas');
             zoomCtx = zoomCanvas.getContext('2d');
-            setupPointerEvents(); // 태블릿 펜/손가락 분리 이벤트 적용
+            setupFastPenEvents(); // 고성능 저지연 펜 이벤트 등록
 
             updateDashboardStats();
             renderCharts();
@@ -488,7 +490,6 @@
             document.getElementById('btn-mode-eraser').className = mode === 'eraser' ? "px-3 py-1 text-xs bg-rose-600 text-white rounded font-bold transition flex items-center gap-1" : "px-3 py-1 text-xs text-slate-300 hover:text-white rounded font-bold transition flex items-center gap-1";
         }
 
-        // 펜 색상 설정 및 피커 색상 저장
         function setPenColor(color) {
             setDrawMode('pen');
             currentPenColor = color;
@@ -552,11 +553,20 @@
                 if (hit) erased = true;
                 return !hit;
             });
-            if (erased) redrawCanvas();
+            if (erased) scheduleRedraw();
         }
 
-        // --- Pointer Event 기반: 펜 전용 드로잉 & 손가락 스크롤 분리 기능 ---
-        function setupPointerEvents() {
+        function scheduleRedraw() {
+            if (!rafId) {
+                rafId = requestAnimationFrame(() => {
+                    redrawCanvas();
+                    rafId = null;
+                });
+            }
+        }
+
+        // --- 딜레이 및 스크롤 충돌을 완벽히 잡은 고성능 펜 드로잉 엔진 ---
+        function setupFastPenEvents() {
             const getPos = (e) => {
                 const rect = zoomCanvas.getBoundingClientRect();
                 const scaleX = zoomCanvas.width / rect.width;
@@ -565,21 +575,20 @@
             };
 
             zoomCanvas.addEventListener('pointerdown', (e) => {
-                // 터치펜(pen) 또는 마우스(mouse) 입력일 때만 그림을 그림
-                // 손가락(touch) 터치 시 그림을 그리지 않고 스크롤을 허용
                 if (e.pointerType === 'touch') {
                     isDrawing = false;
-                    return;
+                    return; // 손가락은 이동용으로 유지
                 }
 
+                e.preventDefault();
                 isDrawing = true;
-                zoomCanvas.setPointerCapture(e.pointerId);
-                const pos = getPos(e);
+                try { zoomCanvas.setPointerCapture(e.pointerId); } catch (err) {}
 
+                const pos = getPos(e);
                 if (drawMode === 'pen') {
                     currentStroke = { color: currentPenColor, width: currentPenWidth, points: [pos] };
                     strokes.push(currentStroke);
-                    redrawCanvas();
+                    scheduleRedraw();
                 } else if (drawMode === 'eraser') {
                     eraseStrokeAt(pos);
                 }
@@ -587,18 +596,19 @@
 
             zoomCanvas.addEventListener('pointermove', (e) => {
                 if (!isDrawing || e.pointerType === 'touch') return;
+                e.preventDefault();
 
                 const pos = getPos(e);
                 if (drawMode === 'pen' && currentStroke) {
                     currentStroke.points.push(pos);
-                    redrawCanvas();
+                    scheduleRedraw();
                 } else if (drawMode === 'eraser') {
                     eraseStrokeAt(pos);
                 }
             });
 
             const stopDrawing = (e) => {
-                if (isDrawing && e.pointerId) {
+                if (isDrawing && e && e.pointerId) {
                     try { zoomCanvas.releasePointerCapture(e.pointerId); } catch (err) {}
                 }
                 isDrawing = false;
