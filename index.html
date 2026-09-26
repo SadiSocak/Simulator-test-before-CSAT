@@ -37,7 +37,7 @@
                     <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
                         <i class="fa-solid fa-chart-pie text-indigo-600"></i> 과목별 성적 & 취약점 분석 대시보드
                     </h2>
-                    <p class="text-xs text-slate-500 mt-0.5">과목 탭을 클릭하면 대시보드 통계와 아래 모의고사 목록이 해당 과목 전용으로 자동 변경됩니다.</p>
+                    <p class="text-xs text-slate-500 mt-0.5">과목 탭을 클릭하면 통계와 목록이 변경되며, 차트 아래 과목 캡슐을 터치하여 선을 켜고 끌 수 있습니다.</p>
                 </div>
                 
                 <!-- 과목 선택 탭 -->
@@ -93,14 +93,21 @@
             <!-- 차트 영역 -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-2">
                 <div class="bg-slate-50/60 p-5 rounded-xl border border-slate-200/60 flex flex-col">
-                    <h3 class="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-                        <i class="fa-solid fa-arrow-trend-up text-indigo-500"></i> 원점수 변화 추이
-                    </h3>
-                    <div class="flex-1 min-h-[250px] relative">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-sm font-bold text-slate-700 flex items-center gap-2">
+                            <i class="fa-solid fa-arrow-trend-up text-indigo-500"></i> 성적 변화 추이
+                        </h3>
+                        <!-- 점수 / 등급 전환 토글 스위치 -->
+                        <div class="bg-slate-200/70 p-1 rounded-lg flex gap-1 text-[11px] font-bold">
+                            <button id="view-mode-score" onclick="toggleTrendMode('score')" class="px-2.5 py-1 rounded-md bg-indigo-600 text-white shadow-sm transition">점수</button>
+                            <button id="view-mode-grade" onclick="toggleTrendMode('grade')" class="px-2.5 py-1 rounded-md text-slate-600 hover:text-slate-900 transition">등급</button>
+                        </div>
+                    </div>
+                    <div class="flex-1 min-h-[260px] relative">
                         <canvas id="scoreTrendChart"></canvas>
                     </div>
-                    <!-- 다중 과목 범례(Legend)가 들어갈 공간 -->
-                    <div id="subject-legend-container" class="flex flex-wrap gap-2 mt-4 justify-center"></div>
+                    <!-- 클릭(터치) 토글 지원 범례 캡슐 영역 -->
+                    <div id="subject-legend-container" class="flex flex-wrap gap-2 mt-4 justify-center select-none"></div>
                 </div>
                 <div class="bg-slate-50/60 p-5 rounded-xl border border-slate-200/60">
                     <h3 class="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
@@ -259,7 +266,7 @@
         </div>
     </div>
 
-    <!-- 다양해진 색상, 펜 두께, 획지우개 지원 캔버스 모달 -->
+    <!-- 캔버스 모달 -->
     <div id="image-zoom-modal" class="fixed inset-0 bg-black/90 z-[100] flex flex-col items-center justify-between hidden p-2 sm:p-4 select-none">
         <div class="w-full max-w-4xl bg-slate-800/95 text-white px-4 py-2 rounded-t-xl flex flex-wrap items-center justify-between gap-3 border-b border-slate-700 z-10">
             <div class="flex items-center gap-3 flex-wrap">
@@ -315,6 +322,7 @@
     <script>
         let examData = JSON.parse(localStorage.getItem('mockExamsData')) || [];
         let currentTab = 'ALL';
+        let currentTrendMode = 'score'; // 'score' 또는 'grade'
 
         let scoreChartInstance = null;
         let reasonChartInstance = null;
@@ -332,15 +340,41 @@
         let strokes = [];
         let currentStroke = null;
 
-        // 다중 그래프를 위한 색상 팔레트
+        // 다중 과목 색상 맵
         const SUBJECT_COLORS = {
-            '국어': '#3b82f6', // 파란색
-            '수학': '#10b981', // 초록색
-            '영어': '#f59e0b', // 주황색
-            '한국사': '#0ea5e9', // 하늘색
-            '탐구1': '#8b5cf6', // 보라색
-            '탐구2': '#ef4444', // 빨간색
-            '기타': '#6b7280'
+            '국어': '#2563eb', // 진한 파랑
+            '수학': '#059669', // 초록
+            '영어': '#d97706', // 주황
+            '한국사': '#0284c7', // 하늘
+            '탐구1': '#7c3aed', // 보라
+            '탐구2': '#dc2626', // 빨강
+            '기타': '#4b5563'
+        };
+
+        // 점 포인트 옆에 점수/등급 값을 숫자로 표시해주는 차트 플러그인
+        const pointLabelPlugin = {
+            id: 'pointLabelPlugin',
+            afterDatasetsDraw(chart) {
+                const { ctx } = chart;
+                chart.data.datasets.forEach((dataset, datasetIndex) => {
+                    const meta = chart.getDatasetMeta(datasetIndex);
+                    if (!meta.hidden) {
+                        meta.data.forEach((element, index) => {
+                            const val = dataset.data[index];
+                            if (val !== null && val !== undefined) {
+                                ctx.save();
+                                ctx.font = 'bold 11px sans-serif';
+                                ctx.fillStyle = dataset.borderColor || '#333';
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'bottom';
+                                const labelText = currentTrendMode === 'score' ? `${val}점` : `${val}등급`;
+                                ctx.fillText(labelText, element.x, element.y - 6);
+                                ctx.restore();
+                            }
+                        });
+                    }
+                });
+            }
         };
 
         window.addEventListener('DOMContentLoaded', () => {
@@ -354,6 +388,40 @@
             renderCharts();
             renderExamList();
         });
+
+        // 점수 <-> 등급 그래프 보기 토글
+        function toggleTrendMode(mode) {
+            currentTrendMode = mode;
+            const btnScore = document.getElementById('view-mode-score');
+            const btnGrade = document.getElementById('view-mode-grade');
+
+            if(mode === 'score') {
+                btnScore.className = "px-2.5 py-1 rounded-md bg-indigo-600 text-white shadow-sm transition";
+                btnGrade.className = "px-2.5 py-1 rounded-md text-slate-600 hover:text-slate-900 transition";
+            } else {
+                btnGrade.className = "px-2.5 py-1 rounded-md bg-indigo-600 text-white shadow-sm transition";
+                btnScore.className = "px-2.5 py-1 rounded-md text-slate-600 hover:text-slate-900 transition";
+            }
+            renderCharts();
+        }
+
+        // 범례 터치/클릭 시 선 숨기기 / 보여주기 토글 기능
+        function toggleDatasetVisibility(datasetIndex) {
+            if (!scoreChartInstance) return;
+            const meta = scoreChartInstance.getDatasetMeta(datasetIndex);
+            meta.hidden = meta.hidden === null ? !scoreChartInstance.data.datasets[datasetIndex].hidden : null;
+            scoreChartInstance.update();
+
+            // 캡슐 디자인 (비활성화 시 불투명 처리)
+            const capsule = document.getElementById(`legend-capsule-${datasetIndex}`);
+            if (capsule) {
+                if(meta.hidden) {
+                    capsule.classList.add('opacity-40', 'line-through');
+                } else {
+                    capsule.classList.remove('opacity-40', 'line-through');
+                }
+            }
+        }
 
         function openModal(editId = null) {
             document.getElementById('exam-form').reset();
@@ -756,22 +824,51 @@
             document.getElementById('stat-main-reason').innerText = mainReason;
         }
 
-        // --- 다중 선 차트 렌더링 로직 (범례 포함) ---
+        function switchTab(tab) {
+            currentTab = tab;
+            
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.className = "tab-btn px-3.5 py-2 rounded-lg text-slate-500 hover:text-slate-900";
+            });
+            const activeBtn = document.getElementById(`tab-${tab}`);
+            if(activeBtn) {
+                activeBtn.className = "tab-btn px-3.5 py-2 rounded-lg bg-white text-indigo-600 shadow-sm";
+            }
+
+            const filterSelect = document.getElementById('filter-subject');
+            if(filterSelect) filterSelect.value = tab;
+
+            const koreanBox = document.getElementById('korean-analysis-box');
+            const mathBox = document.getElementById('math-analysis-box');
+            const tamguBox = document.getElementById('tamgu-analysis-box');
+            
+            koreanBox.classList.add('hidden');
+            mathBox.classList.add('hidden');
+            tamguBox.classList.add('hidden');
+
+            if(tab === '국어') koreanBox.classList.remove('hidden');
+            else if(tab === '수학') mathBox.classList.remove('hidden');
+            else if(tab === '탐구') tamguBox.classList.remove('hidden');
+
+            updateDashboardStats();
+            renderCharts();
+            renderExamList();
+        }
+
+        // --- 차트 렌더링 엔진 ---
         function renderCharts() {
             const filteredExams = getFilteredExams();
 
-            // 1. 점수 추이 차트 갱신
+            // 1. 성적 추이 차트 갱신
             const scoreCtx = document.getElementById('scoreTrendChart').getContext('2d');
             if(scoreChartInstance) scoreChartInstance.destroy();
 
-            // 날짜만 오름차순으로 추출 (X축)
             const allDates = [...new Set(filteredExams.map(e => e.date))].sort();
-            const labels = allDates.map(d => d.substring(5)); // 'MM-DD' 형식
+            const labels = allDates.map(d => d.substring(5)); // MM-DD
 
             const datasets = [];
             const legendHtml = [];
 
-            // 탭에 따라 그릴 과목 배열 구성
             let subjectsToPlot = [];
             if (currentTab === 'ALL') {
                 subjectsToPlot = [...new Set(filteredExams.map(e => e.subject))];
@@ -781,13 +878,13 @@
                 subjectsToPlot = [currentTab];
             }
 
-            subjectsToPlot.forEach(subj => {
+            subjectsToPlot.forEach((subj, idx) => {
                 const subjExams = filteredExams.filter(e => e.subject === subj);
                 
-                // 해당 과목의 날짜별 점수 (없으면 null로 처리하여 선이 끊어지지 않게 spanGaps 적용)
                 const dataPoints = allDates.map(date => {
                     const examOnDate = subjExams.find(e => e.date === date);
-                    return examOnDate ? examOnDate.score : null;
+                    if(!examOnDate) return null;
+                    return currentTrendMode === 'score' ? examOnDate.score : examOnDate.grade;
                 });
 
                 const color = SUBJECT_COLORS[subj] || SUBJECT_COLORS['기타'];
@@ -798,22 +895,22 @@
                     borderColor: color,
                     backgroundColor: color,
                     borderWidth: 2.5,
-                    tension: 0.3,
+                    tension: 0.2,
                     spanGaps: true,
-                    pointRadius: 4,
-                    pointHoverRadius: 6
+                    pointRadius: 5,
+                    pointHoverRadius: 7
                 });
 
-                // 사진처럼 범례(Legend) 캡슐 생성
+                // 터치 이벤트가 작동하는 터치형 범례 캡슐 생성
                 if (subjExams.length > 0) {
                     const latestExam = subjExams[subjExams.length - 1];
                     const errorCount = latestExam.errorItems ? latestExam.errorItems.length : 0;
                     legendHtml.push(`
-                        <div class="inline-flex items-center gap-1.5 bg-white border border-slate-200 px-3 py-1.5 rounded-full text-[11px] sm:text-xs shadow-sm whitespace-nowrap">
+                        <div id="legend-capsule-${idx}" onclick="toggleDatasetVisibility(${idx})" class="cursor-pointer active:scale-95 transition inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-full text-[11px] sm:text-xs shadow-sm whitespace-nowrap">
                             <span class="w-2.5 h-2.5 rounded-full" style="background-color: ${color};"></span>
                             <strong class="font-bold text-slate-800">${subj}</strong>
-                            <span class="text-slate-400">|</span>
-                            <span class="font-bold text-slate-600">${latestExam.score}점</span>
+                            <span class="text-slate-300">|</span>
+                            <span class="font-bold text-indigo-600">${latestExam.score}점</span>
                             <span class="text-slate-400">· 오답 ${errorCount}개</span>
                         </div>
                     `);
@@ -825,14 +922,26 @@
             scoreChartInstance = new Chart(scoreCtx, {
                 type: 'line',
                 data: { labels: labels, datasets: datasets },
+                plugins: [pointLabelPlugin], // 점 옆에 숫자를 적어주는 커스텀 플러그인 연동
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    layout: { padding: { top: 20 } },
                     scales: { 
-                        y: { min: 0, max: 100, grid: { color: '#f1f5f9' } }, 
+                        y: { 
+                            min: currentTrendMode === 'score' ? 0 : 1, 
+                            max: currentTrendMode === 'score' ? 100 : 9, 
+                            reverse: currentTrendMode === 'grade', // 등급일 때 1등급이 상단
+                            grid: { color: '#f1f5f9' },
+                            ticks: {
+                                callback: function(value) {
+                                    return currentTrendMode === 'score' ? value + '점' : value + '등급';
+                                }
+                            }
+                        }, 
                         x: { grid: { display: false } } 
                     },
-                    plugins: { legend: { display: false } } // 커스텀 범례를 쓰므로 내장 범례 끔
+                    plugins: { legend: { display: false } }
                 }
             });
 
