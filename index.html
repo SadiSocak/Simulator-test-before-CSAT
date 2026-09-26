@@ -11,11 +11,15 @@
     <!-- FontAwesome Font Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* 캔버스: 손가락으로 드래그 시 스크롤 허용, 펜일 때는 드로잉 처리 */
+        /* 기본 상태에서는 손가락으로 터치 시 화면 스크롤(pan-y) 허용 */
         #zoom-canvas {
-            touch-action: pan-x pan-y;
+            touch-action: pan-y;
             -webkit-user-select: none;
             user-select: none;
+        }
+        /* 펜 입력 중일 때는 터치 동작 차단 클래스 부여 */
+        #zoom-canvas.pen-active {
+            touch-action: none !important;
         }
     </style>
 </head>
@@ -105,7 +109,6 @@
                         <h3 class="text-sm font-bold text-slate-700 flex items-center gap-2">
                             <i class="fa-solid fa-arrow-trend-up text-indigo-500"></i> 성적 변화 추이
                         </h3>
-                        <!-- 점수 / 등급 전환 토글 스위치 -->
                         <div class="bg-slate-200/70 p-1 rounded-lg flex gap-1 text-[11px] font-bold">
                             <button id="view-mode-score" onclick="toggleTrendMode('score')" class="px-2.5 py-1 rounded-md bg-indigo-600 text-white shadow-sm transition">점수</button>
                             <button id="view-mode-grade" onclick="toggleTrendMode('grade')" class="px-2.5 py-1 rounded-md text-slate-600 hover:text-slate-900 transition">등급</button>
@@ -114,7 +117,6 @@
                     <div class="flex-1 min-h-[260px] relative">
                         <canvas id="scoreTrendChart"></canvas>
                     </div>
-                    <!-- 클릭(터치) 토글 지원 범례 캡슐 영역 -->
                     <div id="subject-legend-container" class="flex flex-wrap gap-2 mt-4 justify-center select-none"></div>
                 </div>
                 <div class="bg-slate-50/60 p-5 rounded-xl border border-slate-200/60">
@@ -140,13 +142,6 @@
                 </h3>
                 <div class="h-60 relative"><canvas id="mathUnitChart"></canvas></div>
             </div>
-
-            <div id="tamgu-analysis-box" class="hidden bg-amber-50/40 p-5 rounded-xl border border-amber-100 space-y-3">
-                <h3 class="text-xs font-bold text-amber-900 flex items-center gap-2">
-                    <i class="fa-solid fa-vial text-amber-600"></i> [탐구 전용] 유형별 오답 분석
-                </h3>
-                <div class="h-60 relative"><canvas id="tamguUnitChart"></canvas></div>
-            </div>
         </section>
 
         <!-- 성적 및 오답 기록 목록 섹션 -->
@@ -170,7 +165,6 @@
                 </div>
             </div>
 
-            <!-- 카드 바디 -->
             <div id="exam-list-container" class="space-y-3"></div>
         </section>
 
@@ -274,7 +268,7 @@
         </div>
     </div>
 
-    <!-- 캔버스 모달 (태블릿 직접선택 완벽 터치 연동 & 손가락 화면 이동 기능) -->
+    <!-- 캔버스 모달 (태블릿 펜 필기 전용 / 손가락 화면 스크롤 완벽 분리) -->
     <div id="image-zoom-modal" onclick="handleOutsideClick(event, 'image-zoom-modal')" class="fixed inset-0 bg-black/90 z-[100] flex flex-col items-center justify-between hidden p-2 sm:p-4 select-none">
         <div class="w-full max-w-4xl bg-slate-800/95 text-white px-4 py-2 rounded-t-xl flex flex-wrap items-center justify-between gap-3 border-b border-slate-700 z-10">
             <div class="flex items-center gap-3 flex-wrap">
@@ -296,10 +290,10 @@
                     <button onclick="setPenColor('#ffffff')" class="w-6 h-6 rounded-full bg-white border-2 border-slate-300 hover:scale-110 transition shadow"></button>
 
                     <!-- 태블릿 터치 완벽 호환 직접선택 컬러피커 -->
-                    <div onclick="triggerColorPicker()" class="relative cursor-pointer flex items-center gap-1 bg-slate-700 hover:bg-slate-600 px-2.5 py-1 rounded text-xs text-slate-200 font-bold transition active:scale-95">
+                    <div onclick="triggerColorPicker(event)" class="relative cursor-pointer flex items-center gap-1 bg-slate-700 hover:bg-slate-600 px-2.5 py-1 rounded text-xs text-slate-200 font-bold transition active:scale-95">
                         <i class="fa-solid fa-palette text-indigo-400"></i>
                         <span id="picker-label-text">직접선택</span>
-                        <input type="color" id="color-picker" oninput="setPenColor(this.value)" onchange="setPenColor(this.value)" class="opacity-0 absolute inset-0 w-full h-full cursor-pointer">
+                        <input type="color" id="color-picker" oninput="setPenColor(this.value)" onchange="setPenColor(this.value)" class="opacity-0 absolute inset-0 w-full h-full cursor-pointer pointer-events-auto">
                     </div>
                 </div>
 
@@ -324,11 +318,10 @@
             <canvas id="zoom-canvas" class="cursor-crosshair max-w-full max-h-[78vh] object-contain"></canvas>
         </div>
         <p class="text-white/60 text-[11px] mt-2 text-center">
-            <i class="fa-solid fa-hand-pointer mr-1"></i><strong>터치펜</strong>으로 필기하며, <strong>손가락</strong>으로 사진을 쓸어올리면 화면이 이동(스크롤)됩니다.
+            <i class="fa-solid fa-pen-nib mr-1"></i><strong>터치펜</strong>으로 쓰면 화면 이동 없이 글씨만 쓰여지고, <strong>손가락</strong>으로는 사진을 스크롤/이동할 수 있습니다.
         </p>
     </div>
 
-    <!-- JS 스크립트 -->
     <script>
         let examData = JSON.parse(localStorage.getItem('mockExamsData')) || [];
         let currentTab = 'ALL';
@@ -338,7 +331,6 @@
         let reasonChartInstance = null;
         let koreanUnitChartInstance = null;
         let mathUnitChartInstance = null;
-        let tamguUnitChartInstance = null;
 
         // 캔버스 관련 변수
         let zoomCanvas, zoomCtx;
@@ -391,7 +383,7 @@
             
             zoomCanvas = document.getElementById('zoom-canvas');
             zoomCtx = zoomCanvas.getContext('2d');
-            setupFastPenEvents();
+            setupTabletSeparatedPenEvents(); // 펜/손가락 터치 완벽 분리 핸들러 등록
 
             updateDashboardStats();
             renderCharts();
@@ -399,11 +391,11 @@
         });
 
         // 태블릿용 직접선택 피커 강제 트리거
-        function triggerColorPicker() {
+        function triggerColorPicker(e) {
             const picker = document.getElementById('color-picker');
             if (picker) {
                 if ('showPicker' in HTMLInputElement.prototype) {
-                    try { picker.showPicker(); } catch (e) { picker.click(); }
+                    try { picker.showPicker(); } catch (err) { picker.click(); }
                 } else {
                     picker.click();
                 }
@@ -578,8 +570,8 @@
             }
         }
 
-        // --- 스타일러스 펜 전용 드로잉 & 손가락 화면 스크롤(이동) 분리 핸들러 ---
-        function setupFastPenEvents() {
+        // --- 스타일러스 펜(드로잉)과 손가락(스크롤) 분리 로직 ---
+        function setupTabletSeparatedPenEvents() {
             const getPos = (e) => {
                 const rect = zoomCanvas.getBoundingClientRect();
                 const scaleX = zoomCanvas.width / rect.width;
@@ -588,14 +580,18 @@
             };
 
             zoomCanvas.addEventListener('pointerdown', (e) => {
-                // 손가락(touch) 입력 시 preventDefault()를 실행하지 않아 브라우저 기본 화면 스크롤이 자연스럽게 작동
+                // 손가락(touch) 입력 시: 드로잉을 시작하지 않고 브라우저가 화면을 스크롤하도록 놔둠
                 if (e.pointerType === 'touch') {
                     isDrawing = false;
+                    zoomCanvas.classList.remove('pen-active');
                     return;
                 }
 
-                // 터치펜(pen) / 마우스(mouse) 입력 시 화면 스크롤을 막고 드로잉 수행
+                // 펜(pen) 또는 마우스(mouse) 입력 시: 화면 이동 완벽 차단 및 필기
                 e.preventDefault();
+                e.stopPropagation();
+                zoomCanvas.classList.add('pen-active');
+                
                 isDrawing = true;
                 try { zoomCanvas.setPointerCapture(e.pointerId); } catch (err) {}
 
@@ -611,7 +607,9 @@
 
             zoomCanvas.addEventListener('pointermove', (e) => {
                 if (!isDrawing || e.pointerType === 'touch') return;
+                
                 e.preventDefault();
+                e.stopPropagation();
 
                 const pos = getPos(e);
                 if (drawMode === 'pen' && currentStroke) {
@@ -628,6 +626,7 @@
                 }
                 isDrawing = false;
                 currentStroke = null;
+                zoomCanvas.classList.remove('pen-active');
             };
 
             zoomCanvas.addEventListener('pointerup', stopDrawing);
@@ -679,7 +678,6 @@
                             </select>
                         </div>
                         <div>
-                            <!-- 통일된 오답 원인 옵션 리스트 -->
                             <select class="err-reason border border-slate-300 rounded-lg px-2 py-1.5 text-xs w-full" required>
                                 <option value="개념 부족" ${data.reason === '개념 부족' ? 'selected' : ''}>개념/지문 이해 부족</option>
                                 <option value="계산 실수" ${data.reason === '계산 실수' ? 'selected' : ''}>계산/단순 실수</option>
@@ -899,15 +897,12 @@
 
             const koreanBox = document.getElementById('korean-analysis-box');
             const mathBox = document.getElementById('math-analysis-box');
-            const tamguBox = document.getElementById('tamgu-analysis-box');
             
             koreanBox.classList.add('hidden');
             mathBox.classList.add('hidden');
-            tamguBox.classList.add('hidden');
 
             if(tab === '국어') koreanBox.classList.remove('hidden');
             else if(tab === '수학') mathBox.classList.remove('hidden');
-            else if(tab === '탐구') tamguBox.classList.remove('hidden');
 
             updateDashboardStats();
             renderCharts();
@@ -1064,24 +1059,6 @@
                 mathUnitChartInstance = new Chart(mathCtx, {
                     type: 'bar',
                     data: { labels: Object.keys(unitCounts), datasets: [{ label: '틀린 문항 수', data: Object.values(unitCounts), backgroundColor: '#6366f1' }] },
-                    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
-                });
-            }
-
-            if(currentTab === '탐구') {
-                const tamguCtx = document.getElementById('tamguUnitChart').getContext('2d');
-                if(tamguUnitChartInstance) tamguUnitChartInstance.destroy();
-                let tamguCounts = { "탐구1 - 개념미흡": 0, "탐구1 - 자료해석": 0, "탐구2 - 개념미흡": 0, "탐구2 - 자료해석": 0 };
-                filteredExams.forEach(e => {
-                    const prefix = e.subject === '탐구1' ? '탐구1' : '탐구2';
-                    e.errorItems.forEach(item => {
-                        if(item.unit.includes('개념')) tamguCounts[`${prefix} - 개념미흡`]++;
-                        else if(item.unit.includes('자료해석')) tamguCounts[`${prefix} - 자료해석`]++;
-                    });
-                });
-                tamguUnitChartInstance = new Chart(tamguCtx, {
-                    type: 'bar',
-                    data: { labels: Object.keys(tamguCounts), datasets: [{ label: '틀린 문항 수', data: Object.values(tamguCounts), backgroundColor: ['#f59e0b', '#d97706', '#10b981', '#059669'] }] },
                     options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
                 });
             }
