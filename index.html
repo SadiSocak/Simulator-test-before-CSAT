@@ -14,7 +14,7 @@
 <body class="bg-slate-50 font-sans text-slate-800 antialiased min-h-screen">
 
     <!-- Header / Navbar -->
-    <header class="bg-indigo-600 text-white shadow-md sticky top-0 z-50">
+    <header class="bg-indigo-600 text-white shadow-md sticky top-0 z-40">
         <div class="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex justify-between items-center">
             <div class="flex items-center space-x-3">
                 <i class="fa-solid fa-graduation-cap text-2xl text-indigo-200"></i>
@@ -199,361 +199,7 @@
                     </div>
                 </div>
 
-                <!-- 틀린 개수 선택 기능 (최대 15개로 확장) -->
-                <div class="border-t pt-4 space-y-3">
-                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                        <label class="block text-xs font-semibold text-slate-700">
-                            <i class="fa-solid fa-xmark text-rose-500 mr-1"></i>틀린 개수 선택 (최대 15개)
-                        </label>
-                        <select id="form-error-count" onchange="generateErrorRowsByCount()" class="border border-indigo-300 bg-indigo-50/50 text-indigo-900 font-bold rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500">
-                            <option value="0">0개 (만점/오답 없음)</option>
-                            <option value="1" selected>1개 틀림</option>
-                            <option value="2">2개 틀림</option>
-                            <option value="3">3개 틀림</option>
-                            <option value="4">4개 틀림</option>
-                            <option value="5">5개 틀림</option>
-                            <option value="6">6개 틀림</option>
-                            <option value="7">7개 틀림</option>
-                            <option value="8">8개 틀림</option>
-                            <option value="9">9개 틀림</option>
-                            <option value="10">10개 틀림</option>
-                            <option value="11">11개 틀림</option>
-                            <option value="12">12개 틀림</option>
-                            <option value="13">13개 틀림</option>
-                            <option value="14">14개 틀림</option>
-                            <option value="15">15개 틀림</option>
-                        </select>
-                    </div>
-
-                    <!-- 선택한 개수만큼 자동 생성되는 오답 목록 -->
-                    <div id="error-items-container" class="space-y-3 pt-2"></div>
-                </div>
-
-                <div class="border-t pt-4">
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">시험 총평 / 반성 메모</label>
-                    <textarea id="form-memo" rows="2" placeholder="시간 배분 문제, 시험 볼 때의 컨디션, 다음 시험 다짐 등을 적어보세요." class="w-full border border-slate-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
-                </div>
-
-                <div class="flex justify-end gap-2 border-t pt-4">
-                    <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 text-sm font-medium">취소</button>
-                    <button type="submit" class="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium shadow-sm">저장하기</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- 오답 복습 & 문제 사진/PDF 상세보기 모달 -->
-    <div id="detail-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4 overflow-y-auto">
-        <div class="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto border border-slate-100">
-            <div class="sticky top-0 bg-white px-6 py-4 border-b flex justify-between items-center z-10">
-                <div>
-                    <span id="detail-subject-badge" class="px-2 py-0.5 rounded text-xs font-bold bg-indigo-100 text-indigo-700">과목</span>
-                    <h3 id="detail-title" class="text-lg font-bold text-slate-800 inline ml-2">시험 상세</h3>
-                </div>
-                <button onclick="closeDetailModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
-            </div>
-
-            <div id="detail-body" class="p-6 space-y-6"></div>
-        </div>
-    </div>
-
-    <!-- 캔버스(Canvas) 펜 그리기 도구가 추가된 라이트박스 확대 모달 -->
-    <div id="image-zoom-modal" class="fixed inset-0 bg-slate-950/90 z-[60] flex flex-col items-center justify-between hidden p-4 select-none">
-        <!-- 상단 툴바 -->
-        <div class="w-full max-w-4xl flex items-center justify-between text-white bg-slate-900/80 px-4 py-2 rounded-xl border border-slate-800 shadow-lg gap-2 flex-wrap">
-            <div class="flex items-center gap-2 text-xs">
-                <span class="font-bold text-indigo-400"><i class="fa-solid fa-pen-ruler mr-1"></i>손풀기 펜 도구:</span>
-                <!-- 색상 선택 -->
-                <button onclick="setPenColor('#ef4444')" class="w-6 h-6 rounded-full bg-red-500 border-2 border-white hover:scale-110 transition"></button>
-                <button onclick="setPenColor('#3b82f6')" class="w-6 h-6 rounded-full bg-blue-500 border-2 border-white hover:scale-110 transition"></button>
-                <button onclick="setPenColor('#eab308')" class="w-6 h-6 rounded-full bg-yellow-500 border-2 border-white hover:scale-110 transition"></button>
-                <button onclick="setPenColor('#000000')" class="w-6 h-6 rounded-full bg-black border-2 border-white hover:scale-110 transition"></button>
-                <button onclick="setPenColor('#ffffff')" class="w-6 h-6 rounded-full bg-white border-2 border-slate-400 hover:scale-110 transition"></button>
-                
-                <!-- 지우개/초기화 -->
-                <button onclick="clearCanvas()" class="ml-2 bg-rose-600/80 hover:bg-rose-600 text-white px-2.5 py-1 rounded text-xs font-bold transition">
-                    <i class="fa-solid fa-eraser mr-1"></i>필기 전체 지우기
-                </button>
-            </div>
-
-            <button onclick="closeImageZoom()" class="text-slate-300 hover:text-white text-sm font-bold bg-slate-800 px-3 py-1 rounded-lg border border-slate-700">
-                <i class="fa-solid fa-xmark mr-1"></i>닫기
-            </button>
-        </div>
-
-        <!-- 캔버스 그리기 영역 -->
-        <div class="relative max-w-4xl w-full flex-1 my-3 flex items-center justify-center overflow-hidden">
-            <canvas id="drawing-canvas" class="rounded-lg shadow-2xl bg-slate-900 cursor-crosshair border border-slate-800 max-w-full max-h-[75vh] object-contain"></canvas>
-        </div>
-
-        <p class="text-slate-400 text-xs">마우스나 손가락(터치)으로 화면 문제 위에 자유롭게 그리며 풀 수 있습니다. (저장되지 않는 연습용입니다)</p>
-    </div>
-
-    <!-- JS 스크립트 -->
-    <script>
-        let examData = JSON.parse(localStorage.getItem('mockExamsData')) || [];
-        let currentTab = 'ALL';
-
-        let scoreChartInstance = null;
-        let reasonChartInstance = null;
-        let koreanUnitChartInstance = null;
-        let mathUnitChartInstance = null;
-        let tamguUnitChartInstance = null;
-
-        // Canvas Drawing 전용 변수
-        let canvas = null;
-        let ctx = null;
-        let isDrawing = false;
-        let penColor = '#ef4444';
-        let penWidth = 3;
-        let loadedImg = new Image();
-
-        window.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('form-date').value = new Date().toISOString().substring(0, 10);
-            initCanvas();
-            updateDashboardStats();
-            renderCharts();
-            renderExamList();
-        });
-
-        // Canvas 초기화
-        function initCanvas() {
-            canvas = document.getElementById('drawing-canvas');
-            ctx = canvas.getContext('2d');
-
-            // 마우스 이벤트
-            canvas.addEventListener('mousedown', startDrawing);
-            canvas.addEventListener('mousemove', draw);
-            canvas.addEventListener('mouseup', stopDrawing);
-            canvas.addEventListener('mouseleave', stopDrawing);
-
-            // 터치 이벤트 (모바일)
-            canvas.addEventListener('touchstart', (e) => {
-                const touch = e.touches[0];
-                const mouseEvent = new MouseEvent('mousedown', {
-                    clientX: touch.clientX,
-                    clientY: touch.clientY
-                });
-                canvas.dispatchEvent(mouseEvent);
-            });
-            canvas.addEventListener('touchmove', (e) => {
-                const touch = e.touches[0];
-                const mouseEvent = new MouseEvent('mousemove', {
-                    clientX: touch.clientX,
-                    clientY: touch.clientY
-                });
-                canvas.dispatchEvent(mouseEvent);
-            });
-            canvas.addEventListener('touchend', () => {
-                const전혀 부끄러운 일이 아닙니다! 오답을 제대로 분석하고 기록해 나가는 것이 성적 상승의 가장 빠른 지름길입니다.
-
-요청하신 **틀린 개수 옵션을 최대 15개까지 확장**하고, 오답 문제 이미지 확대 화면에서 **터치나 마우스로 직접 펜 판서 및 메모를 하고 지울 수 있는 캔버스 기능**을 추가한 전체 코드를 준비했습니다.
-
-GitHub 저장소의 `index.html` 파일에 아래 코드를 그대로 복사해서 덮어씌워주시면 바로 반영됩니다!
-
-```html
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>모의고사 성적 & 오답 분석 대시보드</title>
-    <!-- Tailwind CSS -->
-    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
-    <!-- Chart.js -->
-    <script src="[https://cdn.jsdelivr.net/npm/chart.js](https://cdn.jsdelivr.net/npm/chart.js)"></script>
-    <!-- FontAwesome Font Icons -->
-    <link rel="stylesheet" href="[https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css](https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css)">
-</head>
-<body class="bg-slate-50 font-sans text-slate-800 antialiased min-h-screen">
-
-    <!-- Header / Navbar -->
-    <header class="bg-indigo-600 text-white shadow-md sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex justify-between items-center">
-            <div class="flex items-center space-x-3">
-                <i class="fa-solid fa-graduation-cap text-2xl text-indigo-200"></i>
-                <h1 class="text-xl font-bold tracking-tight sm:text-2xl">모고 오답노트 & 성적 분석</h1>
-            </div>
-            <button onclick="openModal()" class="bg-indigo-500 hover:bg-indigo-400 text-white font-medium px-4 py-2 rounded-lg shadow-sm transition flex items-center gap-2 text-sm">
-                <i class="fa-solid fa-plus"></i> 모의고사 등록
-            </button>
-        </div>
-    </header>
-
-    <main class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8 space-y-8">
-
-        <!-- 분석 대시보드 섹션 -->
-        <section class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-6">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
-                <div>
-                    <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
-                        <i class="fa-solid fa-chart-pie text-indigo-600"></i> 과목별 성적 & 취약점 분석 대시보드
-                    </h2>
-                    <p class="text-sm text-slate-500">과목 탭을 클릭하면 대시보드 통계와 아래 모의고사 목록이 해당 과목 전용으로 자동 변경됩니다.</p>
-                </div>
-                
-                <!-- 과목 선택 탭 -->
-                <div class="flex flex-wrap gap-1 bg-slate-100 p-1 rounded-lg text-sm font-medium">
-                    <button onclick="switchTab('ALL')" id="tab-ALL" class="tab-btn px-3 py-1.5 rounded-md bg-white text-indigo-600 shadow-sm font-bold">전체</button>
-                    <button onclick="switchTab('국어')" id="tab-국어" class="tab-btn px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900">국어</button>
-                    <button onclick="switchTab('수학')" id="tab-수학" class="tab-btn px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900">수학</button>
-                    <button onclick="switchTab('영어')" id="tab-영어" class="tab-btn px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900">영어</button>
-                    <button onclick="switchTab('탐구')" id="tab-탐구" class="tab-btn px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900">탐구</button>
-                </div>
-            </div>
-
-            <!-- 과목별 동적 상단 스탯 카드리스트 -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex items-center space-x-4">
-                    <div class="p-3 bg-indigo-100 text-indigo-600 rounded-lg">
-                        <i class="fa-solid fa-book-bookmark text-xl"></i>
-                    </div>
-                    <div>
-                        <p id="label-stat-exams" class="text-xs font-semibold text-slate-500 uppercase">[전체] 응시 시험</p>
-                        <p id="stat-total-exams" class="text-2xl font-bold text-slate-800">0회</p>
-                    </div>
-                </div>
-                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex items-center space-x-4">
-                    <div class="p-3 bg-rose-100 text-rose-600 rounded-lg">
-                        <i class="fa-solid fa-circle-exclamation text-xl"></i>
-                    </div>
-                    <div>
-                        <p id="label-stat-errors" class="text-xs font-semibold text-slate-500 uppercase">[전체] 기록된 오답</p>
-                        <p id="stat-total-errors" class="text-2xl font-bold text-slate-800">0개</p>
-                    </div>
-                </div>
-                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex items-center space-x-4">
-                    <div class="p-3 bg-emerald-100 text-emerald-600 rounded-lg">
-                        <i class="fa-solid fa-chart-line text-xl"></i>
-                    </div>
-                    <div>
-                        <p id="label-stat-grade" class="text-xs font-semibold text-slate-500 uppercase">[전체] 최근 등급</p>
-                        <p id="stat-recent-grade" class="text-2xl font-bold text-slate-800">- 등급</p>
-                    </div>
-                </div>
-                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex items-center space-x-4">
-                    <div class="p-3 bg-amber-100 text-amber-600 rounded-lg">
-                        <i class="fa-solid fa-triangle-exclamation text-xl"></i>
-                    </div>
-                    <div>
-                        <p id="label-stat-reason" class="text-xs font-semibold text-slate-500 uppercase">[전체] 최대 오답 원인</p>
-                        <p id="stat-main-reason" class="text-base font-bold text-slate-800 truncate max-w-[140px]">-</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 차트 영역 -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-2">
-                <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                    <h3 class="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-                        <i class="fa-solid fa-arrow-trend-up text-indigo-500"></i> 원점수 변화 추이
-                    </h3>
-                    <div class="h-64 relative">
-                        <canvas id="scoreTrendChart"></canvas>
-                    </div>
-                </div>
-                <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                    <h3 class="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-                        <i class="fa-solid fa-chart-doughnut text-rose-500"></i> 오답 발생 원인 비율
-                    </h3>
-                    <div class="h-64 relative">
-                        <canvas id="errorReasonChart"></canvas>
-                    </div>
-                </div>
-            </div>
-
-            <div id="korean-analysis-box" class="hidden bg-emerald-50/50 p-5 rounded-xl border border-emerald-100 space-y-3">
-                <h3 class="text-sm font-bold text-emerald-900 flex items-center gap-2">
-                    <i class="fa-solid fa-book-open text-emerald-600"></i> [국어 전용] 영역별 오답 분포
-                </h3>
-                <div class="h-60 relative"><canvas id="koreanUnitChart"></canvas></div>
-            </div>
-
-            <div id="math-analysis-box" class="hidden bg-indigo-50/50 p-5 rounded-xl border border-indigo-100 space-y-3">
-                <h3 class="text-sm font-bold text-indigo-900 flex items-center gap-2">
-                    <i class="fa-solid fa-square-root-variable text-indigo-600"></i> [수학 전용] 단원별 오답 분포
-                </h3>
-                <div class="h-60 relative"><canvas id="mathUnitChart"></canvas></div>
-            </div>
-
-            <div id="tamgu-analysis-box" class="hidden bg-amber-50/50 p-5 rounded-xl border border-amber-100 space-y-3">
-                <h3 class="text-sm font-bold text-amber-900 flex items-center gap-2">
-                    <i class="fa-solid fa-vial text-amber-600"></i> [탐구 전용] 유형별 오답 분석
-                </h3>
-                <div class="h-60 relative"><canvas id="tamguUnitChart"></canvas></div>
-            </div>
-        </section>
-
-        <!-- 성적 및 오답 기록 목록 섹션 -->
-        <section class="space-y-4">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
-                    <i class="fa-solid fa-list-check text-indigo-600"></i> 등록된 모의고사 목록
-                </h2>
-                <div class="flex items-center gap-2">
-                    <select id="filter-subject" onchange="handleFilterDropdownChange()" class="bg-white border border-slate-300 text-slate-700 text-sm rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 font-semibold">
-                        <option value="ALL">전체 과목 보기</option>
-                        <option value="국어">국어만 보기</option>
-                        <option value="수학">수학만 보기</option>
-                        <option value="영어">영어만 보기</option>
-                        <option value="한국사">한국사만 보기</option>
-                        <option value="탐구">탐구 전체만 보기</option>
-                        <option value="탐구1">탐구1만 보기</option>
-                        <option value="탐구2">탐구2만 보기</option>
-                    </select>
-                    <input type="text" id="search-keyword" oninput="renderExamList()" placeholder="시험명/메모/단원 검색..." class="bg-white border border-slate-300 text-slate-700 text-sm rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 w-44 sm:w-60">
-                </div>
-            </div>
-
-            <!-- 카드 바디 -->
-            <div id="exam-list-container" class="space-y-4"></div>
-        </section>
-
-    </main>
-
-    <!-- 모의고사 등록 및 수정 모달 -->
-    <div id="exam-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4 overflow-y-auto">
-        <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-slate-100">
-            <div class="sticky top-0 bg-white px-6 py-4 border-b flex justify-between items-center z-10">
-                <h3 id="modal-form-title" class="text-lg font-bold text-slate-800 flex items-center gap-2">
-                    <i class="fa-solid fa-pen-to-square text-indigo-600"></i> 모의고사 성적 & 오답 등록
-                </h3>
-                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
-            </div>
-
-            <form id="exam-form" onsubmit="handleFormSubmit(event)" class="p-6 space-y-6">
-                <input type="hidden" id="editing-exam-id" value="">
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">과목 <span class="text-rose-500">*</span></label>
-                        <select id="form-subject" onchange="handleSubjectOrCountChange()" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
-                            <option value="국어">국어</option>
-                            <option value="수학">수학</option>
-                            <option value="영어">영어</option>
-                            <option value="한국사">한국사</option>
-                            <option value="탐구1">탐구1</option>
-                            <option value="탐구2">탐구2</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">시험명 / 회차 <span class="text-rose-500">*</span></label>
-                        <input type="text" id="form-title" required placeholder="예: 3월 학평, 이감 1회차" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">응시 일자</label>
-                        <input type="date" id="form-date" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">원점수 / 등급</label>
-                        <div class="flex gap-2">
-                            <input type="number" id="form-score" min="0" max="100" placeholder="점수" required class="w-1/2 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
-                            <input type="number" id="form-grade" min="1" max="9" placeholder="등급" required class="w-1/2 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 틀린 개수 선택 기능 (최대 15개로 확장) -->
+                <!-- 틀린 개수 선택 기능 (최대 15개) -->
                 <div class="border-t pt-4 space-y-3">
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <label class="block text-xs font-semibold text-slate-700">
@@ -595,7 +241,7 @@ GitHub 저장소의 `index.html` 파일에 아래 코드를 그대로 복사해�
         </div>
     </div>
 
-    <!-- 오답 복습 & 문제 사진/PDF 상세보기 모달 -->
+    <!-- 오답 복습 상세보기 모달 -->
     <div id="detail-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4 overflow-y-auto">
         <div class="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto border border-slate-100">
             <div class="sticky top-0 bg-white px-6 py-4 border-b flex justify-between items-center z-10">
@@ -610,30 +256,34 @@ GitHub 저장소의 `index.html` 파일에 아래 코드를 그대로 복사해�
         </div>
     </div>
 
-    <!-- 펜 판서 메모가 가능한 이미지 확대 라이트박스 모달 -->
-    <div id="image-zoom-modal" class="fixed inset-0 bg-black/90 z-[60] flex flex-col items-center justify-center hidden p-2 sm:p-4 select-none">
+    <!-- 펜 판서 및 지우개가 포함된 문제 이미지 확대 캔버스 모달 (z-index 최상단 설정) -->
+    <div id="image-zoom-modal" class="fixed inset-0 bg-black/90 z-[100] flex flex-col items-center justify-between hidden p-2 sm:p-4 select-none">
         <!-- 툴바 메뉴 -->
         <div class="w-full max-w-4xl bg-slate-800/90 text-white px-4 py-2 rounded-t-xl flex flex-wrap items-center justify-between gap-2 border-b border-slate-700 z-10">
-            <div class="flex items-center gap-2">
-                <span class="text-xs font-bold text-slate-300 mr-2"><i class="fa-solid fa-paintbrush text-indigo-400 mr-1"></i>손글씨 메모:</span>
+            <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-xs font-bold text-slate-300 mr-1"><i class="fa-solid fa-paintbrush text-indigo-400 mr-1"></i>손글씨 도구:</span>
                 
+                <!-- 펜 모드 버튼 -->
+                <button id="btn-mode-pen" onclick="setDrawMode('pen')" class="px-2.5 py-1 text-xs bg-indigo-600 text-white rounded font-bold transition">
+                    <i class="fa-solid fa-pen mr-1"></i>펜
+                </button>
+                <!-- 부분 지우개 버튼 -->
+                <button id="btn-mode-eraser" onclick="setDrawMode('eraser')" class="px-2.5 py-1 text-xs bg-slate-700 hover:bg-slate-600 text-slate-200 rounded font-bold transition">
+                    <i class="fa-solid fa-eraser mr-1"></i>부분 지우개
+                </button>
+
                 <!-- 펜 색상 선택 -->
-                <button onclick="setPenColor('#f43f5e')" class="w-6 h-6 rounded-full bg-rose-500 border-2 border-white hover:scale-110 transition"></button>
-                <button onclick="setPenColor('#3b82f6')" class="w-6 h-6 rounded-full bg-blue-500 border-2 border-white hover:scale-110 transition"></button>
-                <button onclick="setPenColor('#10b981')" class="w-6 h-6 rounded-full bg-emerald-500 border-2 border-white hover:scale-110 transition"></button>
-                <button onclick="setPenColor('#f59e0b')" class="w-6 h-6 rounded-full bg-amber-500 border-2 border-white hover:scale-110 transition"></button>
-                <button onclick="setPenColor('#ffffff')" class="w-6 h-6 rounded-full bg-white border-2 border-slate-300 hover:scale-110 transition"></button>
-                
-                <!-- 펜 두께 선택 -->
-                <div class="border-l border-slate-600 pl-2 ml-1 flex items-center gap-1">
-                    <button onclick="setPenWidth(2)" class="px-2 py-0.5 text-xs bg-slate-700 hover:bg-slate-600 rounded font-bold">얇게</button>
-                    <button onclick="setPenWidth(5)" class="px-2 py-0.5 text-xs bg-slate-700 hover:bg-slate-600 rounded font-bold">보통</button>
-                    <button onclick="setPenWidth(10)" class="px-2 py-0.5 text-xs bg-slate-700 hover:bg-slate-600 rounded font-bold">두껍게</button>
+                <div id="pen-colors" class="flex items-center gap-1 border-l border-slate-600 pl-2 ml-1">
+                    <button onclick="setPenColor('#f43f5e')" class="w-5 h-5 rounded-full bg-rose-500 border border-white hover:scale-110 transition"></button>
+                    <button onclick="setPenColor('#3b82f6')" class="w-5 h-5 rounded-full bg-blue-500 border border-white hover:scale-110 transition"></button>
+                    <button onclick="setPenColor('#10b981')" class="w-5 h-5 rounded-full bg-emerald-500 border border-white hover:scale-110 transition"></button>
+                    <button onclick="setPenColor('#f59e0b')" class="w-5 h-5 rounded-full bg-amber-500 border border-white hover:scale-110 transition"></button>
+                    <button onclick="setPenColor('#ffffff')" class="w-5 h-5 rounded-full bg-white border border-slate-300 hover:scale-110 transition"></button>
                 </div>
             </div>
 
             <div class="flex items-center gap-2">
-                <button onclick="clearCanvas()" class="px-3 py-1 bg-rose-600 hover:bg-rose-500 text-white rounded text-xs font-bold transition">
+                <button onclick="clearCanvas()" class="px-3 py-1 bg-rose-600/80 hover:bg-rose-600 text-white rounded text-xs font-bold transition">
                     <i class="fa-solid fa-rotate-left mr-1"></i>필기 전체 지우기
                 </button>
                 <button onclick="closeImageZoom()" class="px-3 py-1 bg-slate-700 hover:bg-slate-600 text-white rounded text-xs font-bold transition">
@@ -643,10 +293,10 @@ GitHub 저장소의 `index.html` 파일에 아래 코드를 그대로 복사해�
         </div>
 
         <!-- 캔버스 드로잉 영역 -->
-        <div class="relative max-w-4xl max-h-[80vh] flex items-center justify-center bg-slate-950/80 rounded-b-xl overflow-hidden border border-slate-700">
+        <div class="relative max-w-4xl max-h-[80vh] w-full flex-1 flex items-center justify-center bg-slate-950/80 rounded-b-xl overflow-hidden border border-slate-700">
             <canvas id="zoom-canvas" class="cursor-crosshair max-w-full max-h-[78vh] object-contain"></canvas>
         </div>
-        <p class="text-white/60 text-[11px] mt-2"><i class="fa-solid fa-circle-info mr-1"></i>마우스나 손가락(터치)으로 화면 문제 위에 직접 자유롭게 글씨를 쓰고 풀이할 수 있습니다. (창을 닫으면 필기는 초기화됩니다)</p>
+        <p class="text-white/60 text-[11px] mt-2"><i class="fa-solid fa-circle-info mr-1"></i>마우스나 손가락(터치)으로 화면 문제 위에 자유롭게 펜으로 풀거나 지우개로 부분 지우기가 가능합니다.</p>
     </div>
 
     <!-- JS 스크립트 -->
@@ -664,14 +314,16 @@ GitHub 저장소의 `index.html` 파일에 아래 코드를 그대로 복사해�
         let zoomCanvas = null;
         let zoomCtx = null;
         let isDrawing = false;
+        let drawMode = 'pen'; // 'pen' 또는 'eraser'
         let currentPenColor = '#f43f5e';
         let currentPenWidth = 3;
+        let eraserWidth = 20;
         let currentBaseImage = new Image();
 
         window.addEventListener('DOMContentLoaded', () => {
             document.getElementById('form-date').value = new Date().toISOString().substring(0, 10);
             
-            // 캔버스 설정
+            // 캔버스 초기 설정
             zoomCanvas = document.getElementById('zoom-canvas');
             zoomCtx = zoomCanvas.getContext('2d');
             setupCanvasEvents();
@@ -720,7 +372,7 @@ GitHub 저장소의 `index.html` 파일에 아래 코드를 그대로 복사해�
             document.getElementById('detail-modal').classList.add('hidden');
         }
 
-        // --- 캔버스 드로잉/판서 기능 구현 ---
+        // --- 캔버스 판서 및 부분 지우개 기능 ---
         function zoomImage(src) {
             currentBaseImage = new Image();
             currentBaseImage.src = src;
@@ -736,12 +388,22 @@ GitHub 저장소의 `index.html` 파일에 아래 코드를 그대로 복사해�
             document.getElementById('image-zoom-modal').classList.add('hidden');
         }
 
-        function setPenColor(color) {
-            currentPenColor = color;
+        function setDrawMode(mode) {
+            drawMode = mode;
+            const penBtn = document.getElementById('btn-mode-pen');
+            const eraserBtn = document.getElementById('btn-mode-eraser');
+            if(mode === 'pen') {
+                penBtn.className = "px-2.5 py-1 text-xs bg-indigo-600 text-white rounded font-bold transition";
+                eraserBtn.className = "px-2.5 py-1 text-xs bg-slate-700 hover:bg-slate-600 text-slate-200 rounded font-bold transition";
+            } else {
+                eraserBtn.className = "px-2.5 py-1 text-xs bg-rose-600 text-white rounded font-bold transition";
+                penBtn.className = "px-2.5 py-1 text-xs bg-slate-700 hover:bg-slate-600 text-slate-200 rounded font-bold transition";
+            }
         }
 
-        function setPenWidth(width) {
-            currentPenWidth = width;
+        function setPenColor(color) {
+            setDrawMode('pen');
+            currentPenColor = color;
         }
 
         function clearCanvas() {
@@ -775,25 +437,36 @@ GitHub 저장소의 `index.html` 파일에 아래 코드를 그대로 복사해�
                 if(!isDrawing) return;
                 e.preventDefault();
                 const pos = getPos(e);
-                zoomCtx.lineTo(pos.x, pos.y);
-                zoomCtx.strokeStyle = currentPenColor;
-                zoomCtx.lineWidth = currentPenWidth * (zoomCanvas.width / 800); // 이미지 크기에 비례한 선 두께
-                zoomCtx.lineCap = 'round';
-                zoomCtx.lineJoin = 'round';
-                zoomCtx.stroke();
+
+                if(drawMode === 'pen') {
+                    zoomCtx.globalCompositeOperation = 'source-over';
+                    zoomCtx.lineTo(pos.x, pos.y);
+                    zoomCtx.strokeStyle = currentPenColor;
+                    zoomCtx.lineWidth = currentPenWidth * (zoomCanvas.width / 800);
+                    zoomCtx.lineCap = 'round';
+                    zoomCtx.lineJoin = 'round';
+                    zoomCtx.stroke();
+                } else if(drawMode === 'eraser') {
+                    // 원본 이미지의 해당 부분 복원 (부분 지우개)
+                    const size = eraserWidth * (zoomCanvas.width / 800);
+                    zoomCtx.save();
+                    zoomCtx.beginPath();
+                    zoomCtx.arc(pos.x, pos.y, size / 2, 0, Math.PI * 2);
+                    zoomCtx.clip();
+                    zoomCtx.drawImage(currentBaseImage, 0, 0);
+                    zoomCtx.restore();
+                }
             };
 
             const stopDrawing = () => {
                 isDrawing = false;
             };
 
-            // 마우스 이벤트
             zoomCanvas.addEventListener('mousedown', startDrawing);
             zoomCanvas.addEventListener('mousemove', draw);
             zoomCanvas.addEventListener('mouseup', stopDrawing);
             zoomCanvas.addEventListener('mouseleave', stopDrawing);
 
-            // 터치 이벤트 (스마트폰/태블릿 대응)
             zoomCanvas.addEventListener('touchstart', startDrawing);
             zoomCanvas.addEventListener('touchmove', draw);
             zoomCanvas.addEventListener('touchend', stopDrawing);
@@ -820,7 +493,6 @@ GitHub 저장소의 `index.html` 파일에 아래 코드를 그대로 복사해�
             renderExamList();
         }
 
-        // 개수에 따른 오답 입력란 생성
         function generateErrorRowsByCount(existingItems = null) {
             const container = document.getElementById('error-items-container');
             const count = parseInt(document.getElementById('form-error-count').value);
@@ -1306,12 +978,12 @@ GitHub 저장소의 `index.html` 파일에 아래 코드를 그대로 복사해�
                             <div class="mt-3">
                                 <p class="text-xs font-bold text-slate-600 mb-1 flex items-center justify-between">
                                     <span><i class="fa-solid fa-image text-indigo-500 mr-1"></i> 첨부된 문제/풀이 사진:</span>
-                                    <span onclick="zoomImage('${item.fileData}')" class="text-indigo-600 cursor-pointer text-[11px] font-bold hover:underline"><i class="fa-solid fa-paintbrush mr-1"></i> 크게 보고 펜으로 풀어보기</span>
+                                    <span onclick="zoomImage('${item.fileData}')" class="text-indigo-600 cursor-pointer text-[11px] font-bold hover:underline"><i class="fa-solid fa-paintbrush mr-1"></i> 크게 보고 펜/지우개로 풀어보기</span>
                                 </p>
                                 <div class="relative group cursor-pointer" onclick="zoomImage('${item.fileData}')">
                                     <img src="${item.fileData}" class="max-h-80 rounded-lg border object-contain bg-slate-100 p-1 group-hover:opacity-90 transition">
                                     <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition bg-black/30 rounded-lg">
-                                        <span class="bg-indigo-600 text-white text-xs px-3 py-1.5 rounded-full font-bold shadow"><i class="fa-solid fa-paintbrush mr-1"></i> 터치/마우스로 풀어보기</span>
+                                        <span class="bg-indigo-600 text-white text-xs px-3 py-1.5 rounded-full font-bold shadow"><i class="fa-solid fa-paintbrush mr-1"></i> 크게 보고 문제 풀어보기</span>
                                     </div>
                                 </div>
                             </div>
