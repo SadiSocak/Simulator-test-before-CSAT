@@ -11,13 +11,14 @@
     <!-- FontAwesome Font Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* 기본 상태에서는 손가락으로 터치 시 화면 스크롤(pan-y) 허용 */
+        /* 기본 상태: 손가락으로 터치 시 스크롤 허용 */
         #zoom-canvas {
-            touch-action: pan-y;
+            touch-action: pan-x pan-y;
             -webkit-user-select: none;
             user-select: none;
+            -webkit-touch-callout: none;
         }
-        /* 펜 입력 중일 때는 터치 동작 차단 클래스 부여 */
+        /* 펜 그리기 직전 또는 중일 때는 모든 터치 스크롤 동작 차단 */
         #zoom-canvas.pen-active {
             touch-action: none !important;
         }
@@ -34,7 +35,7 @@
                 </div>
                 <h1 class="text-lg font-bold text-slate-900 tracking-tight sm:text-xl">모고 오답노트 & 성적 분석</h1>
             </div>
-            <button onclick="openModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2 rounded-xl shadow-sm transition flex items-center gap-2 text-sm">
+            <button onclick="openModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2 rounded-xl shadow-sm transition flex items-center gap-2 text-sm active:scale-95">
                 <i class="fa-solid fa-plus text-xs"></i> 모의고사 등록
             </button>
         </div>
@@ -129,6 +130,7 @@
                 </div>
             </div>
 
+            <!-- 국어 전용 분석 박스 -->
             <div id="korean-analysis-box" class="hidden bg-emerald-50/40 p-5 rounded-xl border border-emerald-100 space-y-3">
                 <h3 class="text-xs font-bold text-emerald-900 flex items-center gap-2">
                     <i class="fa-solid fa-book-open text-emerald-600"></i> [국어 전용] 영역별 오답 분포
@@ -136,6 +138,7 @@
                 <div class="h-60 relative"><canvas id="koreanUnitChart"></canvas></div>
             </div>
 
+            <!-- 수학 전용 분석 박스 -->
             <div id="math-analysis-box" class="hidden bg-indigo-50/40 p-5 rounded-xl border border-indigo-100 space-y-3">
                 <h3 class="text-xs font-bold text-indigo-900 flex items-center gap-2">
                     <i class="fa-solid fa-square-root-variable text-indigo-600"></i> [수학 전용] 단원별 오답 분포
@@ -314,7 +317,7 @@
             </div>
         </div>
 
-        <div class="relative max-w-4xl max-h-[80vh] w-full flex-1 flex items-center justify-center bg-slate-950/80 rounded-b-xl overflow-hidden border border-slate-700">
+        <div class="relative max-w-4xl max-h-[80vh] w-full flex-1 flex items-center justify-center bg-slate-950/80 rounded-b-xl overflow-auto border border-slate-700">
             <canvas id="zoom-canvas" class="cursor-crosshair max-w-full max-h-[78vh] object-contain"></canvas>
         </div>
         <p class="text-white/60 text-[11px] mt-2 text-center">
@@ -570,7 +573,7 @@
             }
         }
 
-        // --- 스타일러스 펜(드로잉)과 손가락(스크롤) 분리 로직 ---
+        // --- 스타일러스 펜(드로잉)과 손가락(스크롤) 분리 및 수직 스크롤 방지 로직 ---
         function setupTabletSeparatedPenEvents() {
             const getPos = (e) => {
                 const rect = zoomCanvas.getBoundingClientRect();
@@ -579,8 +582,15 @@
                 return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
             };
 
+            // 펜 드로잉 중 수직/가로 브라우저 무조건적 스크롤 차단 전역 이벤트
+            window.addEventListener('touchmove', (e) => {
+                if (isDrawing) {
+                    e.preventDefault();
+                }
+            }, { passive: false });
+
             zoomCanvas.addEventListener('pointerdown', (e) => {
-                // 손가락(touch) 입력 시: 드로잉을 시작하지 않고 브라우저가 화면을 스크롤하도록 놔둠
+                // 손가락(touch) 입력 시: 드로잉을 시작하지 않고 브라우저가 자연스럽게 스크롤하도록 허용
                 if (e.pointerType === 'touch') {
                     isDrawing = false;
                     zoomCanvas.classList.remove('pen-active');
@@ -603,11 +613,12 @@
                 } else if (drawMode === 'eraser') {
                     eraseStrokeAt(pos);
                 }
-            });
+            }, { passive: false });
 
             zoomCanvas.addEventListener('pointermove', (e) => {
                 if (!isDrawing || e.pointerType === 'touch') return;
                 
+                // 펜 입력 중 수직 빠른 동작 포함 무조건 스크롤 방지
                 e.preventDefault();
                 e.stopPropagation();
 
@@ -618,7 +629,7 @@
                 } else if (drawMode === 'eraser') {
                     eraseStrokeAt(pos);
                 }
-            });
+            }, { passive: false });
 
             const stopDrawing = (e) => {
                 if (isDrawing && e && e.pointerId) {
