@@ -10,6 +10,12 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- FontAwesome Font Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* 캔버스 기본 터치 동작 활성화 (손가락 스크롤 허용) */
+        #zoom-canvas {
+            touch-action: pan-x pan-y;
+        }
+    </style>
 </head>
 <body class="bg-[#f8fafc] font-sans text-slate-800 antialiased min-h-screen">
 
@@ -169,8 +175,8 @@
     </main>
 
     <!-- 모의고사 등록 및 수정 모달 -->
-    <div id="exam-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4 overflow-y-auto">
-        <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-slate-100">
+    <div id="exam-modal" onclick="handleOutsideClick(event, 'exam-modal')" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-slate-100 relative">
             <div class="sticky top-0 bg-white px-6 py-4 border-b border-slate-100 flex justify-between items-center z-10">
                 <h3 id="modal-form-title" class="text-base font-bold text-slate-800 flex items-center gap-2">
                     <i class="fa-solid fa-pen-to-square text-indigo-600"></i> 모의고사 성적 & 오답 등록
@@ -202,7 +208,7 @@
                         <input type="date" id="form-date" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-slate-600 mb-1">원점수 / 등급</label>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">원점수 / 등급 <span class="text-rose-500">*</span></label>
                         <div class="flex gap-2">
                             <input type="number" id="form-score" min="0" max="100" placeholder="점수" required class="w-1/2 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
                             <input type="number" id="form-grade" min="1" max="9" placeholder="등급" required class="w-1/2 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
@@ -252,8 +258,8 @@
     </div>
 
     <!-- 오답 복습 상세보기 모달 -->
-    <div id="detail-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4 overflow-y-auto">
-        <div class="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto border border-slate-100">
+    <div id="detail-modal" onclick="handleOutsideClick(event, 'detail-modal')" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto border border-slate-100 relative">
             <div class="sticky top-0 bg-white px-6 py-4 border-b border-slate-100 flex justify-between items-center z-10">
                 <div>
                     <span id="detail-subject-badge" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-50 text-indigo-600">과목</span>
@@ -266,8 +272,8 @@
         </div>
     </div>
 
-    <!-- 캔버스 모달 -->
-    <div id="image-zoom-modal" class="fixed inset-0 bg-black/90 z-[100] flex flex-col items-center justify-between hidden p-2 sm:p-4 select-none">
+    <!-- 캔버스 모달 (직접선택 연동 & 태블릿 펜/손가락 분리) -->
+    <div id="image-zoom-modal" onclick="handleOutsideClick(event, 'image-zoom-modal')" class="fixed inset-0 bg-black/90 z-[100] flex flex-col items-center justify-between hidden p-2 sm:p-4 select-none">
         <div class="w-full max-w-4xl bg-slate-800/95 text-white px-4 py-2 rounded-t-xl flex flex-wrap items-center justify-between gap-3 border-b border-slate-700 z-10">
             <div class="flex items-center gap-3 flex-wrap">
                 <div class="flex bg-slate-900 p-1 rounded-lg border border-slate-700">
@@ -287,9 +293,11 @@
                     <button onclick="setPenColor('#f59e0b')" class="w-6 h-6 rounded-full bg-amber-500 border-2 border-white hover:scale-110 transition shadow"></button>
                     <button onclick="setPenColor('#ffffff')" class="w-6 h-6 rounded-full bg-white border-2 border-slate-300 hover:scale-110 transition shadow"></button>
 
-                    <label class="relative cursor-pointer flex items-center gap-1 bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-xs text-slate-200 font-bold">
-                        <i class="fa-solid fa-palette text-indigo-400"></i> 직접선택
-                        <input type="color" id="color-picker" onchange="setPenColor(this.value)" class="opacity-0 absolute w-0 h-0">
+                    <!-- 직접선택 컬러 피커 (이벤트 완벽 저장) -->
+                    <label id="picker-btn-label" class="relative cursor-pointer flex items-center gap-1 bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-xs text-slate-200 font-bold transition">
+                        <i class="fa-solid fa-palette text-indigo-400"></i>
+                        <span id="picker-label-text">직접선택</span>
+                        <input type="color" id="color-picker" oninput="setPenColor(this.value)" onchange="setPenColor(this.value)" class="opacity-0 absolute inset-0 w-full h-full cursor-pointer">
                     </label>
                 </div>
 
@@ -313,8 +321,8 @@
         <div class="relative max-w-4xl max-h-[80vh] w-full flex-1 flex items-center justify-center bg-slate-950/80 rounded-b-xl overflow-hidden border border-slate-700">
             <canvas id="zoom-canvas" class="cursor-crosshair max-w-full max-h-[78vh] object-contain"></canvas>
         </div>
-        <p class="text-white/60 text-[11px] mt-2">
-            <i class="fa-solid fa-circle-info mr-1"></i>[획 지우개] 필기한 선 위를 건드리면 해당 획 전체가 깔끔하게 삭제됩니다.
+        <p class="text-white/60 text-[11px] mt-2 text-center">
+            <i class="fa-solid fa-pen-nib mr-1"></i>태블릿에서는 <strong>스타일러스 펜</strong>으로만 드로잉되며, <strong>손가락</strong>은 화면 스크롤로 사용됩니다.
         </p>
     </div>
 
@@ -322,7 +330,7 @@
     <script>
         let examData = JSON.parse(localStorage.getItem('mockExamsData')) || [];
         let currentTab = 'ALL';
-        let currentTrendMode = 'score'; // 'score' 또는 'grade'
+        let currentTrendMode = 'score';
 
         let scoreChartInstance = null;
         let reasonChartInstance = null;
@@ -330,7 +338,7 @@
         let mathUnitChartInstance = null;
         let tamguUnitChartInstance = null;
 
-        // 캔버스 엔진 변수
+        // 캔버스 관련 변수
         let zoomCanvas, zoomCtx;
         let isDrawing = false;
         let drawMode = 'pen';
@@ -340,18 +348,16 @@
         let strokes = [];
         let currentStroke = null;
 
-        // 다중 과목 색상 맵
         const SUBJECT_COLORS = {
-            '국어': '#2563eb', // 진한 파랑
-            '수학': '#059669', // 초록
-            '영어': '#d97706', // 주황
-            '한국사': '#0284c7', // 하늘
-            '탐구1': '#7c3aed', // 보라
-            '탐구2': '#dc2626', // 빨강
+            '국어': '#2563eb',
+            '수학': '#059669',
+            '영어': '#d97706',
+            '한국사': '#0284c7',
+            '탐구1': '#7c3aed',
+            '탐구2': '#dc2626',
             '기타': '#4b5563'
         };
 
-        // 점 포인트 옆에 점수/등급 값을 숫자로 표시해주는 차트 플러그인
         const pointLabelPlugin = {
             id: 'pointLabelPlugin',
             afterDatasetsDraw(chart) {
@@ -382,14 +388,21 @@
             
             zoomCanvas = document.getElementById('zoom-canvas');
             zoomCtx = zoomCanvas.getContext('2d');
-            setupCanvasEvents();
+            setupPointerEvents(); // 태블릿 펜/손가락 분리 이벤트 적용
 
             updateDashboardStats();
             renderCharts();
             renderExamList();
         });
 
-        // 점수 <-> 등급 그래프 보기 토글
+        function handleOutsideClick(event, modalId) {
+            if (event.target.id === modalId) {
+                if (modalId === 'exam-modal') closeModal();
+                else if (modalId === 'detail-modal') closeDetailModal();
+                else if (modalId === 'image-zoom-modal') closeImageZoom();
+            }
+        }
+
         function toggleTrendMode(mode) {
             currentTrendMode = mode;
             const btnScore = document.getElementById('view-mode-score');
@@ -405,14 +418,12 @@
             renderCharts();
         }
 
-        // 범례 터치/클릭 시 선 숨기기 / 보여주기 토글 기능
         function toggleDatasetVisibility(datasetIndex) {
             if (!scoreChartInstance) return;
             const meta = scoreChartInstance.getDatasetMeta(datasetIndex);
             meta.hidden = meta.hidden === null ? !scoreChartInstance.data.datasets[datasetIndex].hidden : null;
             scoreChartInstance.update();
 
-            // 캡슐 디자인 (비활성화 시 불투명 처리)
             const capsule = document.getElementById(`legend-capsule-${datasetIndex}`);
             if (capsule) {
                 if(meta.hidden) {
@@ -477,10 +488,20 @@
             document.getElementById('btn-mode-eraser').className = mode === 'eraser' ? "px-3 py-1 text-xs bg-rose-600 text-white rounded font-bold transition flex items-center gap-1" : "px-3 py-1 text-xs text-slate-300 hover:text-white rounded font-bold transition flex items-center gap-1";
         }
 
+        // 펜 색상 설정 및 피커 색상 저장
         function setPenColor(color) {
             setDrawMode('pen');
             currentPenColor = color;
-            document.getElementById('color-picker').value = color;
+            
+            const picker = document.getElementById('color-picker');
+            if (picker && picker.value !== color) {
+                picker.value = color;
+            }
+
+            const labelText = document.getElementById('picker-label-text');
+            if (labelText) {
+                labelText.style.color = color;
+            }
         }
 
         function changePenSize(val) {
@@ -534,46 +555,58 @@
             if (erased) redrawCanvas();
         }
 
-        function setupCanvasEvents() {
+        // --- Pointer Event 기반: 펜 전용 드로잉 & 손가락 스크롤 분리 기능 ---
+        function setupPointerEvents() {
             const getPos = (e) => {
                 const rect = zoomCanvas.getBoundingClientRect();
                 const scaleX = zoomCanvas.width / rect.width;
                 const scaleY = zoomCanvas.height / rect.height;
-                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-                return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
+                return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
             };
 
-            const startDrawing = (e) => {
+            zoomCanvas.addEventListener('pointerdown', (e) => {
+                // 터치펜(pen) 또는 마우스(mouse) 입력일 때만 그림을 그림
+                // 손가락(touch) 터치 시 그림을 그리지 않고 스크롤을 허용
+                if (e.pointerType === 'touch') {
+                    isDrawing = false;
+                    return;
+                }
+
                 isDrawing = true;
+                zoomCanvas.setPointerCapture(e.pointerId);
                 const pos = getPos(e);
+
                 if (drawMode === 'pen') {
                     currentStroke = { color: currentPenColor, width: currentPenWidth, points: [pos] };
                     strokes.push(currentStroke);
                     redrawCanvas();
-                } else if (drawMode === 'eraser') eraseStrokeAt(pos);
-            };
+                } else if (drawMode === 'eraser') {
+                    eraseStrokeAt(pos);
+                }
+            });
 
-            const draw = (e) => {
-                if (!isDrawing) return;
-                e.preventDefault();
+            zoomCanvas.addEventListener('pointermove', (e) => {
+                if (!isDrawing || e.pointerType === 'touch') return;
+
                 const pos = getPos(e);
                 if (drawMode === 'pen' && currentStroke) {
                     currentStroke.points.push(pos);
                     redrawCanvas();
-                } else if (drawMode === 'eraser') eraseStrokeAt(pos);
+                } else if (drawMode === 'eraser') {
+                    eraseStrokeAt(pos);
+                }
+            });
+
+            const stopDrawing = (e) => {
+                if (isDrawing && e.pointerId) {
+                    try { zoomCanvas.releasePointerCapture(e.pointerId); } catch (err) {}
+                }
+                isDrawing = false;
+                currentStroke = null;
             };
 
-            const stopDrawing = () => { isDrawing = false; currentStroke = null; };
-
-            zoomCanvas.addEventListener('mousedown', startDrawing);
-            zoomCanvas.addEventListener('mousemove', draw);
-            zoomCanvas.addEventListener('mouseup', stopDrawing);
-            zoomCanvas.addEventListener('mouseleave', stopDrawing);
-
-            zoomCanvas.addEventListener('touchstart', startDrawing);
-            zoomCanvas.addEventListener('touchmove', draw);
-            zoomCanvas.addEventListener('touchend', stopDrawing);
+            zoomCanvas.addEventListener('pointerup', stopDrawing);
+            zoomCanvas.addEventListener('pointercancel', stopDrawing);
         }
 
         function handleSubjectOrCountChange() { generateErrorRowsByCount(); }
@@ -855,16 +888,14 @@
             renderExamList();
         }
 
-        // --- 차트 렌더링 엔진 ---
         function renderCharts() {
             const filteredExams = getFilteredExams();
 
-            // 1. 성적 추이 차트 갱신
             const scoreCtx = document.getElementById('scoreTrendChart').getContext('2d');
             if(scoreChartInstance) scoreChartInstance.destroy();
 
             const allDates = [...new Set(filteredExams.map(e => e.date))].sort();
-            const labels = allDates.map(d => d.substring(5)); // MM-DD
+            const labels = allDates.map(d => d.substring(5));
 
             const datasets = [];
             const legendHtml = [];
@@ -901,7 +932,6 @@
                     pointHoverRadius: 7
                 });
 
-                // 터치 이벤트가 작동하는 터치형 범례 캡슐 생성
                 if (subjExams.length > 0) {
                     const latestExam = subjExams[subjExams.length - 1];
                     const errorCount = latestExam.errorItems ? latestExam.errorItems.length : 0;
@@ -922,7 +952,7 @@
             scoreChartInstance = new Chart(scoreCtx, {
                 type: 'line',
                 data: { labels: labels, datasets: datasets },
-                plugins: [pointLabelPlugin], // 점 옆에 숫자를 적어주는 커스텀 플러그인 연동
+                plugins: [pointLabelPlugin],
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
@@ -931,7 +961,7 @@
                         y: { 
                             min: currentTrendMode === 'score' ? 0 : 1, 
                             max: currentTrendMode === 'score' ? 100 : 9, 
-                            reverse: currentTrendMode === 'grade', // 등급일 때 1등급이 상단
+                            reverse: currentTrendMode === 'grade',
                             grid: { color: '#f1f5f9' },
                             ticks: {
                                 callback: function(value) {
@@ -945,7 +975,6 @@
                 }
             });
 
-            // 2. 오답 원인 비율 차트 갱신
             const reasonCtx = document.getElementById('errorReasonChart').getContext('2d');
             if(reasonChartInstance) reasonChartInstance.destroy();
 
@@ -973,7 +1002,6 @@
                 }
             });
 
-            // 3. 과목 전용 차트 갱신
             if(currentTab === '국어') {
                 const koreanCtx = document.getElementById('koreanUnitChart').getContext('2d');
                 if(koreanUnitChartInstance) koreanUnitChartInstance.destroy();
@@ -1183,7 +1211,7 @@
                             <i class="fa-solid fa-book-open-reader text-indigo-600"></i> 오답 문제 및 첨부 자료
                         </h4>
                         <button onclick="closeDetailModal(); openModal(${exam.id});" class="text-xs bg-indigo-50 text-indigo-600 font-bold px-3 py-1.5 rounded-lg border border-indigo-200 hover:bg-indigo-100 transition">
-                            <i class="fa-solid fa-pen mr-1"></i> 내용/사진 수정하기
+                            <i class="fa-solid fa-pen mr-1"></i> 내용/성적 수정하기
                         </button>
                     </div>
                     ${errorDetailsHtml || '<p class="text-xs text-slate-400">등록된 오답 문항이 없습니다. (만점)</p>'}
